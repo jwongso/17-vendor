@@ -715,32 +715,48 @@ async function submitBooking() {
       total:    '$' + computeTotal()
     });
 
-    const res  = await fetch(APPS_SCRIPT_URL, { method: 'POST', body });
-    const data = await res.json();
+    // Apps Script doesn't support CORS headers; use no-cors so the POST goes
+    // through. We can't read the response, so we poll the booked list after
+    // a short delay to detect conflicts.
+    await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body });
 
-    if (data.success) {
-      ids.forEach(id => markTaken(id));
+    // Wait for Apps Script to finish writing
+    await new Promise(r => setTimeout(r, 2500));
+
+    // Re-read the sheet to see what is now booked
+    const checkRes  = await fetch(APPS_SCRIPT_URL);
+    const checkData = await checkRes.json();
+    const nowTaken  = (checkData.booked || []).map(Number);
+
+    const confirmed = ids.filter(id =>  nowTaken.includes(id));
+    const conflict  = ids.filter(id => !nowTaken.includes(id));
+
+    // Mark every newly-taken booth (ours or someone else's)
+    nowTaken.forEach(id => markTaken(id));
+
+    if (conflict.length === 0) {
+      // All selected booths are now booked — our submission succeeded
       selected.clear();
       redrawSVGs();
       updateBar();
       document.getElementById('form-view').style.display   = 'none';
       document.getElementById('success-view').style.display = '';
 
-    } else if (data.conflict && data.conflict.length) {
-      const nums = data.conflict.join(', ');
-      showError(`Stand #${nums} baru saja dipesan orang lain. Stand tersebut telah diblokir. Silakan pilih stand lain dan coba lagi.`);
-      data.conflict.forEach(id => markTaken(parseInt(id)));
+    } else if (confirmed.length === 0) {
+      // None of our booths made it — someone else got them all first
       redrawSVGs();
       updateBar();
-
-      if (selected.size === 0) {
-        closeModal();
-      } else {
-        populateModalSummary(); // refresh tags with remaining selection
-      }
+      showError(`Stand #${conflict.join(', ')} baru saja dipesan orang lain. Silakan pilih stand lain dan coba lagi.`);
+      if (selected.size === 0) closeModal();
+      else populateModalSummary();
 
     } else {
-      showError('Terjadi kesalahan pada server. Silakan coba beberapa saat lagi.');
+      // Partial: some confirmed, some taken by someone else
+      selected.clear();
+      redrawSVGs();
+      updateBar();
+      document.getElementById('form-view').style.display   = 'none';
+      document.getElementById('success-view').style.display = '';
     }
 
   } catch (err) {
