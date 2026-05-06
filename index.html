@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pemesanan Stand – HUT RI ke-80</title>
+  <style>
+    :root {
+      --red:      #CC0001;
+      --red-dark: #990001;
+      --green:    #27ae60;
+      --taken:    #888;
+      --c200:     #f5c400;
+      --c220:     #cc0001;
+      --c250:     #ff85a1;
+      --cft:      #9b59b6;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #f0f0f0;
+      color: #1a1a1a;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    header {
+      background: var(--red);
+      color: #fff;
+      text-align: center;
+      padding: 14px 16px;
+    }
+    header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.3px; }
+    header p  { font-size: 0.82rem; opacity: 0.88; margin-top: 3px; }
+
+    /* ── Legend ─────────────────────────────────────────────── */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      padding: 10px 16px;
+      background: #fff;
+      border-bottom: 1px solid #ddd;
+      justify-content: center;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.78rem;
+    }
+    .legend-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      border: 1px solid rgba(0,0,0,0.18);
+      flex-shrink: 0;
+    }
+
+    /* ── Tabs ───────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      border-bottom: 3px solid var(--red);
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 11px 8px;
+      background: #fff;
+      border: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: #666;
+      transition: background 0.15s, color 0.15s;
+    }
+    .tab-btn.active {
+      background: var(--red);
+      color: #fff;
+    }
+
+    /* ── Floor plan ─────────────────────────────────────────── */
+    .floor-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      background: #e8e8e8;
+    }
+    .floor-wrap {
+      position: relative;
+      display: inline-block;
+      min-width: 600px;
+      width: 100%;
+      max-width: 1065px;
+    }
+    .floor-wrap img {
+      display: block;
+      width: 100%;
+    }
+    .floor-wrap svg {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+    }
+    .booth-group { cursor: pointer; }
+    .booth-group.unavailable { cursor: not-allowed; pointer-events: none; }
+    .booth-group.taken       { cursor: not-allowed; }
+
+    /* ── Tab content ────────────────────────────────────────── */
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* ── Sticky summary bar ─────────────────────────────────── */
+    .summary-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #fff;
+      border-top: 2px solid var(--red);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.12);
+      z-index: 100;
+    }
+    .summary-text {
+      flex: 1;
+      min-width: 0;
+    }
+    .summary-text .label {
+      font-size: 0.8rem;
+      color: #555;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .summary-text .price {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--red);
+    }
+    .book-btn {
+      background: var(--red);
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 7px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .book-btn:disabled { background: #bbb; cursor: not-allowed; }
+    .bar-spacer { height: 68px; }
+
+    /* ── Modal overlay ──────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 460px;
+      max-height: 92vh;
+      overflow-y: auto;
+      padding: 22px 20px;
+    }
+    .modal h2 {
+      color: var(--red);
+      text-align: center;
+      font-size: 1.1rem;
+      margin-bottom: 14px;
+    }
+
+    /* Terms box */
+    .terms-box {
+      background: #fff8f8;
+      border: 1px solid #fcc;
+      border-radius: 8px;
+      padding: 11px 14px;
+      margin-bottom: 14px;
+      font-size: 0.8rem;
+      line-height: 1.65;
+    }
+    .terms-box h3 {
+      color: var(--red);
+      font-size: 0.85rem;
+      margin-bottom: 7px;
+    }
+    .terms-box ul { padding-left: 16px; }
+    .terms-box li { margin-bottom: 3px; }
+
+    /* Booking summary */
+    .booking-summary { margin-bottom: 14px; }
+    .booking-summary .section-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #777;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 7px;
+    }
+    .booth-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .booth-tag {
+      background: var(--green);
+      color: #fff;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .total-line {
+      margin-top: 10px;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+    .total-line .total-amount { color: var(--red); }
+
+    /* Error banner */
+    .error-msg {
+      display: none;
+      background: #fff0f0;
+      border: 1px solid #faa;
+      border-radius: 7px;
+      padding: 9px 13px;
+      color: #c00;
+      font-size: 0.82rem;
+      margin-bottom: 13px;
+      line-height: 1.5;
+    }
+    .error-msg.show { display: block; }
+
+    /* Form */
+    .form-group { margin-bottom: 13px; }
+    .form-group label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+    .form-group input {
+      width: 100%;
+      border: 1.5px solid #ddd;
+      border-radius: 6px;
+      padding: 9px 11px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus { border-color: var(--red); }
+    .form-group input.field-error { border-color: #e00; }
+
+    /* Modal actions */
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .btn-cancel {
+      flex: 1;
+      padding: 10px;
+      border: 1.5px solid #ccc;
+      background: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.88rem;
+    }
+    .btn-confirm {
+      flex: 2;
+      padding: 10px;
+      background: var(--red);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+    .btn-confirm:disabled { background: #bbb; cursor: not-allowed; }
+
+    /* Success */
+    .success-view {
+      text-align: center;
+      padding: 16px 8px;
+    }
+    .success-icon { font-size: 3.2rem; }
+    .success-view h3 { color: var(--green); margin: 12px 0 8px; font-size: 1.1rem; }
+    .success-view p  { color: #666; font-size: 0.85rem; line-height: 1.6; margin-bottom: 18px; }
+
+    /* Spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ───────────────────────────────────────────────── -->
+<header>
+  <h1>🎉 Pemesanan Stand Pameran</h1>
+  <p>Peringatan HUT Kemerdekaan Republik Indonesia ke-80</p>
+</header>
+
+<!-- ── Legend ───────────────────────────────────────────────── -->
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#f5c400;"></div><span>$200</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#cc0001;"></div><span>$220</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#ff85a1;"></div><span>$250</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#9b59b6;"></div><span>$250 Food Truck</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#27ae60;"></div><span>Dipilih</span>
+  </div>
+  <div class="legend-item">
+    <div class="legend-dot" style="background:#888;"></div><span>Sudah Dipesan</span>
+  </div>
+</div>
+
+<!-- ── Tabs ─────────────────────────────────────────────────── -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('indoor', this)">🏠 Indoor (1–19)</button>
+  <button class="tab-btn"        onclick="switchTab('outdoor', this)">🌳 Outdoor (20–47)</button>
+</div>
+
+<!-- ── Indoor ───────────────────────────────────────────────── -->
+<div class="tab-pane active" id="pane-indoor">
+  <div class="floor-scroll">
+    <div class="floor-wrap">
+      <img src="indoor.jpeg" alt="Denah Indoor">
+      <svg id="svg-indoor" viewBox="0 0 1065 654" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </div>
+</div>
+
+<!-- ── Outdoor ──────────────────────────────────────────────── -->
+<div class="tab-pane" id="pane-outdoor">
+  <div class="floor-scroll">
+    <div class="floor-wrap">
+      <img src="outdoor.jpeg" alt="Denah Outdoor">
+      <svg id="svg-outdoor" viewBox="0 0 1065 653" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </div>
+</div>
+
+<div class="bar-spacer"></div>
+
+<!-- ── Sticky bar ───────────────────────────────────────────── -->
+<div class="summary-bar">
+  <div class="summary-text">
+    <div class="label" id="sel-label">Belum ada stand dipilih</div>
+    <div class="price" id="sel-price" style="display:none;"></div>
+  </div>
+  <button class="book-btn" id="book-btn" disabled onclick="openModal()">Pesan Stand</button>
+</div>
+
+<!-- ── Modal ────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal" onclick="onOverlayClick(event)">
+  <div class="modal">
+
+    <!-- Form view -->
+    <div id="form-view">
+      <h2>📋 Formulir Pemesanan</h2>
+
+      <div class="terms-box">
+        <h3>Syarat &amp; Ketentuan:</h3>
+        <ul>
+          <li>Pembayaran dilakukan paling lambat 7 hari setelah konfirmasi pemesanan.</li>
+          <li>Stand tidak dapat dipindahtangankan kepada pihak lain.</li>
+          <li>Panitia berhak membatalkan pemesanan jika pembayaran tidak dilakukan tepat waktu.</li>
+          <li>Keputusan panitia bersifat final dan tidak dapat diganggu gugat.</li>
+        </ul>
+      </div>
+
+      <div class="booking-summary">
+        <div class="section-label">Stand yang dipilih:</div>
+        <div class="booth-tags" id="modal-tags"></div>
+        <div class="total-line">Total: <span class="total-amount" id="modal-total"></span></div>
+      </div>
+
+      <div class="error-msg" id="error-msg"></div>
+
+      <div class="form-group">
+        <label for="f-name">Nama Lengkap *</label>
+        <input type="text" id="f-name" placeholder="Masukkan nama lengkap Anda" autocomplete="name">
+      </div>
+      <div class="form-group">
+        <label for="f-email">Alamat Email *</label>
+        <input type="email" id="f-email" placeholder="contoh@email.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label for="f-phone">No. HP / WhatsApp *</label>
+        <input type="tel" id="f-phone" placeholder="08xxxxxxxxxx" autocomplete="tel">
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-cancel" onclick="closeModal()">Batal</button>
+        <button class="btn-confirm" id="btn-confirm" onclick="submitBooking()">Konfirmasi Pemesanan</button>
+      </div>
+    </div>
+
+    <!-- Success view -->
+    <div id="success-view" style="display:none;">
+      <div class="success-view">
+        <div class="success-icon">✅</div>
+        <h3>Pemesanan Berhasil!</h3>
+        <p>Konfirmasi telah dikirim ke email Anda.<br>Panitia akan menghubungi Anda untuk informasi pembayaran dalam 1x24 jam.</p>
+        <button class="btn-confirm" onclick="closeModal()">Tutup</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────
+const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+
+// ── Booth definitions ─────────────────────────────────────────
+// type:'ft' = Food Truck; available:false = blocked/N/A
+// shape:'circle' uses cx,cy,r; default rect uses x,y,w,h
+const BOOTHS = {
+  indoor: [
+    { id:  1, price: 200,              x: 224, y: 239, w: 43, h: 32 },
+    { id:  2, price: 200,              x: 272, y: 239, w: 43, h: 32 },
+    { id:  3, price: 220,              x: 356, y: 106, w: 38, h: 42 },
+    { id:  4, price: 220,              x: 356, y: 152, w: 38, h: 40 },
+    { id:  5, price: 250,              x: 449, y: 106, w: 40, h: 32 },
+    { id:  6, price: 250,              x: 494, y: 106, w: 40, h: 32 },
+    { id:  7, price: 250,              x: 427, y: 162, w: 40, h: 37 },
+    { id:  8, price: 250,              x: 427, y: 203, w: 40, h: 37 },
+    { id:  9, price: 220,              x: 232, y: 297, w: 42, h: 33 },
+    { id: 10, price: 220,              x: 278, y: 297, w: 42, h: 33 },
+    { id: 11, price: 200,              x: 229, y: 383, w: 45, h: 33 },
+    { id: 12, price: 200,              x: 278, y: 383, w: 45, h: 33 },
+    { id: 13, price: 220,              x: 350, y: 373, w: 37, h: 48 },
+    { id: 14, price: 250,              x: 422, y: 343, w: 40, h: 37 },
+    { id: 15, price: 220,              x: 350, y: 425, w: 37, h: 42 },
+    { id: 16, price: 250,              x: 422, y: 384, w: 40, h: 37 },
+    { id: 17, price: 250,              x: 450, y: 434, w: 40, h: 33 },
+    { id: 18, price: 250,              x: 494, y: 434, w: 40, h: 33 },
+    { id: 19, price: 250, type: 'ft', shape: 'circle', cx: 455, cy: 533, r: 31 },
+  ],
+  outdoor: [
+    { id: 20, price: 250, type: 'ft', x: 376, y:  78, w: 38, h: 33 },
+    { id: 21, price: 220,             x: 450, y: 147, w: 37, h: 30 },
+    { id: 22, price: 220,             x: 491, y: 147, w: 37, h: 30 },
+    { id: 23, price: 220,             x: 532, y: 147, w: 37, h: 30 },
+    { id: 24, price: 220,             x: 573, y: 147, w: 37, h: 30 },
+    { id: 25, price: 220,             x: 614, y: 147, w: 37, h: 30 },
+    { id: 26, price: 220,             x: 655, y: 147, w: 37, h: 30 },
+    { id: 27, price:   0, available: false, x: 450, y: 236, w: 37, h: 30 },
+    { id: 28, price: 220,             x: 491, y: 236, w: 37, h: 30 },
+    { id: 29, price: 220,             x: 532, y: 236, w: 37, h: 30 },
+    { id: 30, price: 220,             x: 573, y: 236, w: 37, h: 30 },
+    { id: 31, price: 220,             x: 614, y: 236, w: 37, h: 30 },
+    { id: 32, price: 220,             x: 637, y: 236, w: 37, h: 30 },
+    { id: 33, price: 200,             x: 628, y: 270, w: 37, h: 30 },
+    { id: 34, price: 200,             x: 669, y: 270, w: 37, h: 30 },
+    { id: 35, price: 250,             x: 407, y: 378, w: 37, h: 30 },
+    { id: 36, price: 250,             x: 448, y: 378, w: 37, h: 30 },
+    { id: 37, price: 250,             x: 489, y: 378, w: 37, h: 30 },
+    { id: 38, price: 250,             x: 530, y: 378, w: 37, h: 30 },
+    { id: 39, price: 200,             x: 571, y: 378, w: 37, h: 30 },
+    { id: 40, price: 200,             x: 612, y: 378, w: 37, h: 30 },
+    { id: 41, price: 220,             x: 624, y: 355, w: 37, h: 30 },
+    { id: 42, price: 220,             x: 665, y: 355, w: 37, h: 30 },
+    { id: 43, price: 200,             x: 388, y: 447, w: 37, h: 30 },
+    { id: 44, price: 220,             x: 447, y: 465, w: 37, h: 30 },
+    { id: 45, price: 220,             x: 481, y: 488, w: 37, h: 30 },
+    { id: 46, price: 220,             x: 515, y: 508, w: 37, h: 30 },
+    { id: 47, price: 220,             x: 550, y: 528, w: 37, h: 30 },
+  ]
+};
+
+const PRICE_COLOR = { 200: '#f5c400', 220: '#cc0001', 250: '#ff85a1', ft: '#9b59b6' };
+const ALL_BOOTHS  = [...BOOTHS.indoor, ...BOOTHS.outdoor];
+
+// ── App state ─────────────────────────────────────────────────
+const selected = new Set(); // booth IDs the current user has picked
+const taken    = new Set(); // booth IDs confirmed booked in the sheet
+
+// ── Colour helper ─────────────────────────────────────────────
+function boothColor(booth) {
+  if (booth.available === false) return '#888';
+  if (taken.has(booth.id))       return '#888';
+  if (selected.has(booth.id))    return '#27ae60';
+  return booth.type === 'ft' ? PRICE_COLOR.ft : PRICE_COLOR[booth.price];
+}
+
+// ── SVG builder ───────────────────────────────────────────────
+function buildSVG(tab) {
+  const svg = document.getElementById('svg-' + tab);
+  svg.innerHTML = '';
+
+  BOOTHS[tab].forEach(booth => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    g.classList.add('booth-group');
+    if (booth.available === false) g.classList.add('unavailable');
+    else if (taken.has(booth.id)) g.classList.add('taken');
+
+    const fill   = boothColor(booth);
+    const stroke = (booth.available === false || taken.has(booth.id)) ? '#555' : '#222';
+
+    let shape, lx, ly;
+    if (booth.shape === 'circle') {
+      shape = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      shape.setAttribute('cx', booth.cx);
+      shape.setAttribute('cy', booth.cy);
+      shape.setAttribute('r',  booth.r);
+      lx = booth.cx; ly = booth.cy;
+    } else {
+      shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      shape.setAttribute('x',      booth.x);
+      shape.setAttribute('y',      booth.y);
+      shape.setAttribute('width',  booth.w);
+      shape.setAttribute('height', booth.h);
+      shape.setAttribute('rx', 3);
+      lx = booth.x + booth.w / 2;
+      ly = booth.y + booth.h / 2;
+    }
+    shape.setAttribute('fill',         fill);
+    shape.setAttribute('fill-opacity', '0.62');
+    shape.setAttribute('stroke',       stroke);
+    shape.setAttribute('stroke-width', '1.5');
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', lx);
+    text.setAttribute('y', ly);
+    text.setAttribute('text-anchor',       'middle');
+    text.setAttribute('dominant-baseline', 'middle');
+    text.setAttribute('font-size',   '10');
+    text.setAttribute('font-weight', '700');
+    text.setAttribute('fill',        '#fff');
+    text.setAttribute('stroke',      '#000');
+    text.setAttribute('stroke-width','2');
+    text.setAttribute('paint-order', 'stroke fill');
+    text.setAttribute('pointer-events', 'none');
+    text.textContent = booth.id;
+
+    if (booth.available !== false && !taken.has(booth.id)) {
+      g.addEventListener('click', () => toggleBooth(booth.id));
+    }
+
+    g.appendChild(shape);
+    g.appendChild(text);
+    svg.appendChild(g);
+  });
+}
+
+function redrawSVGs() {
+  buildSVG('indoor');
+  buildSVG('outdoor');
+}
+
+// ── Toggle selection ──────────────────────────────────────────
+function toggleBooth(id) {
+  if (taken.has(id)) return;
+  selected.has(id) ? selected.delete(id) : selected.add(id);
+  redrawSVGs();
+  updateBar();
+}
+
+// ── Mark booths as taken (booked or conflict) ─────────────────
+function markTaken(id) {
+  taken.add(id);
+  selected.delete(id);
+}
+
+// ── Lookup helpers ────────────────────────────────────────────
+function getMeta(id)      { return ALL_BOOTHS.find(b => b.id === id); }
+function isIndoor(id)     { return !!BOOTHS.indoor.find(b => b.id === id); }
+function computeTotal()   { return [...selected].reduce((s, id) => s + (getMeta(id)?.price ?? 0), 0); }
+
+// ── Summary bar ───────────────────────────────────────────────
+function updateBar() {
+  const labelEl = document.getElementById('sel-label');
+  const priceEl = document.getElementById('sel-price');
+  const btnEl   = document.getElementById('book-btn');
+
+  if (selected.size === 0) {
+    labelEl.textContent  = 'Belum ada stand dipilih';
+    priceEl.style.display = 'none';
+    btnEl.disabled = true;
+  } else {
+    const sorted = [...selected].sort((a, b) => a - b);
+    labelEl.textContent = 'Stand: ' + sorted.map(id =>
+      `#${id} (${isIndoor(id) ? 'In' : 'Out'})`
+    ).join(', ');
+    priceEl.textContent  = 'Total: $' + computeTotal().toLocaleString();
+    priceEl.style.display = '';
+    btnEl.disabled = false;
+  }
+}
+
+// ── Tab switching ─────────────────────────────────────────────
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('pane-' + tab).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── Modal helpers ─────────────────────────────────────────────
+function populateModalSummary() {
+  const tags = document.getElementById('modal-tags');
+  tags.innerHTML = '';
+  [...selected].sort((a, b) => a - b).forEach(id => {
+    const meta = getMeta(id);
+    const loc  = isIndoor(id) ? 'Indoor' : 'Outdoor';
+    const tag  = document.createElement('span');
+    tag.className   = 'booth-tag';
+    tag.textContent = `#${id} ${loc} – $${meta.price}`;
+    tags.appendChild(tag);
+  });
+  document.getElementById('modal-total').textContent = '$' + computeTotal().toLocaleString();
+}
+
+function openModal() {
+  if (selected.size === 0) return;
+  populateModalSummary();
+  hideError();
+  document.getElementById('form-view').style.display   = '';
+  document.getElementById('success-view').style.display = 'none';
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  ['f-name', 'f-email', 'f-phone'].forEach(id => {
+    const el = document.getElementById(id);
+    el.value = '';
+    el.classList.remove('field-error');
+  });
+}
+
+function onOverlayClick(e) {
+  if (e.target === document.getElementById('modal')) closeModal();
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function hideError() {
+  document.getElementById('error-msg').classList.remove('show');
+}
+
+// ── Booking submission ────────────────────────────────────────
+async function submitBooking() {
+  hideError();
+
+  const nameEl  = document.getElementById('f-name');
+  const emailEl = document.getElementById('f-email');
+  const phoneEl = document.getElementById('f-phone');
+
+  [nameEl, emailEl, phoneEl].forEach(el => el.classList.remove('field-error'));
+
+  const name  = nameEl.value.trim();
+  const email = emailEl.value.trim();
+  const phone = phoneEl.value.trim();
+
+  let valid = true;
+  if (!name)  { nameEl.classList.add('field-error');  valid = false; }
+  if (!email || !email.includes('@')) { emailEl.classList.add('field-error'); valid = false; }
+  if (!phone) { phoneEl.classList.add('field-error'); valid = false; }
+
+  if (!valid) {
+    showError('Harap isi semua kolom dengan benar.');
+    return;
+  }
+
+  const ids    = [...selected].sort((a, b) => a - b);
+  const inIds  = ids.filter(id => isIndoor(id));
+  const outIds = ids.filter(id => !isIndoor(id));
+  const location = inIds.length && outIds.length ? 'Indoor & Outdoor'
+                 : inIds.length ? 'Indoor' : 'Outdoor';
+
+  const btn = document.getElementById('btn-confirm');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Memproses...';
+
+  try {
+    const body = new URLSearchParams({
+      name,
+      email,
+      phone,
+      booths:   ids.join(', '),
+      location,
+      total:    '$' + computeTotal()
+    });
+
+    const res  = await fetch(APPS_SCRIPT_URL, { method: 'POST', body });
+    const data = await res.json();
+
+    if (data.success) {
+      ids.forEach(id => markTaken(id));
+      selected.clear();
+      redrawSVGs();
+      updateBar();
+      document.getElementById('form-view').style.display   = 'none';
+      document.getElementById('success-view').style.display = '';
+
+    } else if (data.conflict && data.conflict.length) {
+      const nums = data.conflict.join(', ');
+      showError(`Stand #${nums} baru saja dipesan orang lain. Stand tersebut telah diblokir. Silakan pilih stand lain dan coba lagi.`);
+      data.conflict.forEach(id => markTaken(parseInt(id)));
+      redrawSVGs();
+      updateBar();
+
+      if (selected.size === 0) {
+        closeModal();
+      } else {
+        populateModalSummary(); // refresh tags with remaining selection
+      }
+
+    } else {
+      showError('Terjadi kesalahan pada server. Silakan coba beberapa saat lagi.');
+    }
+
+  } catch (err) {
+    showError('Tidak dapat terhubung ke server. Periksa koneksi internet Anda dan coba lagi.');
+    console.error('Booking error:', err);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Konfirmasi Pemesanan';
+  }
+}
+
+// ── Load currently booked booths from Apps Script ─────────────
+async function loadBooked() {
+  if (APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
+    redrawSVGs();
+    updateBar();
+    return;
+  }
+  try {
+    const res  = await fetch(APPS_SCRIPT_URL);
+    const data = await res.json();
+    if (Array.isArray(data.booked)) {
+      data.booked.forEach(id => taken.add(parseInt(id)));
+    }
+  } catch (e) {
+    console.warn('Could not load booked status:', e);
+  }
+  redrawSVGs();
+  updateBar();
+}
+
+// ── Boot ──────────────────────────────────────────────────────
+loadBooked();
+</script>
+</body>
+</html>
