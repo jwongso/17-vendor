@@ -12,9 +12,10 @@ const SHEET_NAME        = 'Bookings';
 const COORDINATOR_EMAIL = 'YOUR_COORDINATOR_EMAIL_HERE'; // e.g. boss@gmail.com
 
 // ── GET: return list of currently booked booth IDs ────────────
-// Called by the page on load to mark taken booths.
+// Supports both plain JSON and JSONP (pass ?callback=fnName).
+// JSONP bypasses browser CORS restrictions for cross-origin reads.
 // Returns: { booked: [3, 5, 21, ...] }
-function doGet() {
+function doGet(e) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
   const rows  = sheet.getDataRange().getValues();
 
@@ -28,8 +29,18 @@ function doGet() {
     });
   }
 
+  const json     = JSON.stringify({ booked });
+  const callback = e && e.parameter && e.parameter.callback;
+
+  if (callback) {
+    // JSONP: wrap in callback function — no CORS header needed
+    return ContentService
+      .createTextOutput(callback + '(' + json + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+
   return ContentService
-    .createTextOutput(JSON.stringify({ booked }))
+    .createTextOutput(json)
     .setMimeType(ContentService.MimeType.JSON);
 }
 
