@@ -692,7 +692,11 @@ function markTaken(id) { taken.add(id); selected.delete(id); }
 // ── Lookup helpers ────────────────────────────────────────────
 function getMeta(id)    { return ALL_BOOTHS.find(b => b.id === id); }
 function isIndoor(id)   { return !!BOOTHS.indoor.find(b => b.id === id); }
-function computeTotal() { return [...selected].reduce((s, id) => s + (getMeta(id)?.price ?? 0), 0); }
+function computeTotal() {
+  const subtotal = [...selected].reduce((s, id) => s + (getMeta(id)?.price ?? 0), 0);
+  return selected.size > 2 ? Math.round(subtotal * 0.9) : subtotal;
+}
+function hasDiscount()  { return selected.size > 2; }
 
 // ── Summary bar ───────────────────────────────────────────────
 function updateBar() {
@@ -709,7 +713,7 @@ function updateBar() {
     labelEl.textContent = 'Stand: ' + sorted.map(id =>
       `#${id} (${isIndoor(id) ? 'In' : 'Out'})`
     ).join(', ');
-    priceEl.textContent   = 'Total: $' + computeTotal().toLocaleString();
+    priceEl.textContent   = 'Total: $' + computeTotal().toLocaleString() + (hasDiscount() ? ' (disc 10%)' : '');
     priceEl.style.display = '';
     btnEl.disabled = false;
   }
@@ -735,7 +739,7 @@ function populateModalSummary() {
     tag.textContent = `#${id} ${loc} – $${meta.price}`;
     tags.appendChild(tag);
   });
-  document.getElementById('modal-total').textContent = '$' + computeTotal().toLocaleString();
+  document.getElementById('modal-total').textContent = '$' + computeTotal().toLocaleString() + (hasDiscount() ? ' (disc 10%)' : '');
   const sorted = [...selected].sort((a, b) => a - b);
   document.getElementById('f-stall').value = sorted.map(id =>
     `Stand #${id} (${isIndoor(id) ? 'Indoor' : 'Outdoor'})`
