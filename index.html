@@ -724,7 +724,7 @@ async function submitBooking() {
     await new Promise(r => setTimeout(r, 2500));
 
     // Re-read the sheet to see what is now booked
-    const checkData = await fetchJSONP(APPS_SCRIPT_URL);
+    const checkData = await fetch('/.netlify/functions/booked').then(r => r.json());
     const nowTaken  = (checkData.booked || []).map(Number);
 
     const confirmed = ids.filter(id =>  nowTaken.includes(id));
@@ -767,35 +767,11 @@ async function submitBooking() {
   }
 }
 
-// ── JSONP helper (bypasses CORS for GET) ──────────────────────
-function fetchJSONP(url) {
-  return new Promise((resolve, reject) => {
-    const cbName = '_cb' + Date.now();
-    const script = document.createElement('script');
-    const timer  = setTimeout(() => {
-      cleanup(); reject(new Error('JSONP timeout'));
-    }, 10000);
-    function cleanup() {
-      clearTimeout(timer);
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    }
-    window[cbName] = (data) => { cleanup(); resolve(data); };
-    script.onerror = () => { cleanup(); reject(new Error('JSONP error')); };
-    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName;
-    document.head.appendChild(script);
-  });
-}
-
-// ── Load currently booked booths from Apps Script ─────────────
+// ── Load currently booked booths via Netlify proxy ───────────
 async function loadBooked() {
-  if (APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
-    redrawSVGs();
-    updateBar();
-    return;
-  }
   try {
-    const data = await fetchJSONP(APPS_SCRIPT_URL);
+    const res  = await fetch('/.netlify/functions/booked');
+    const data = await res.json();
     if (Array.isArray(data.booked)) {
       data.booked.forEach(id => taken.add(parseInt(id)));
     }
