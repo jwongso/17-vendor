@@ -100,13 +100,12 @@ function handleBooking(params) {
       params.total,        // H: Total
       'Active'             // I: Status  (change to 'Cancelled' to unblock)
     ]);
-    ]);
 
     // Confirmation email to the vendor (non-fatal if it fails)
     try {
       MailApp.sendEmail({
         to:       params.email,
-        subject:  '✅ Konfirmasi Pemesanan Stand – HUT RI ke-80',
+        subject:  '✅ Konfirmasi Pemesanan Stand – HUT RI ke-81',
         htmlBody: `
           <div style="font-family:sans-serif; max-width:480px;">
             <h2 style="color:#CC0001; border-bottom:2px solid #CC0001; padding-bottom:8px;">
@@ -142,7 +141,7 @@ function handleBooking(params) {
             </table>
             <p>Panitia akan menghubungi Anda dalam <strong>1x24 jam</strong> untuk informasi pembayaran.</p>
             <p style="color:#888; font-size:12px; margin-top:20px;">
-              Panitia HUT Kemerdekaan RI ke-80
+              Panitia HUT Kemerdekaan RI ke-81
             </p>
           </div>
         `
