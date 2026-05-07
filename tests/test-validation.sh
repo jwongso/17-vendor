@@ -69,7 +69,7 @@ check "Email without domain" \
 
 check "Valid email passes" \
   "$(post "name=Test&email=valid%40example.com&phone=123456789&stallname=Test&booths=44&location=Outdoor&total=%24220&agree=true")" \
-  '"success"'
+  '"success":true'
 
 echo ""
 # ── Invalid phone ─────────────────────────────────────────────
@@ -83,8 +83,8 @@ check "Phone too short (4 digits)" \
   '"error"'
 
 check "Phone with + prefix passes" \
-  "$(post "name=Test&email=a%40b.com&phone=%2B64212345678&stallname=Test&booths=44&location=Outdoor&total=%24220&agree=true")" \
-  '"success"'
+  "$(post "name=Test&email=a%40b.com&phone=%2B64212345678&stallname=Test&booths=45&location=Outdoor&total=%24220&agree=true")" \
+  '"success":true'
 
 echo ""
 # ── Invalid booth numbers ─────────────────────────────────────
@@ -107,7 +107,7 @@ check "Booth letters (abc)" \
 
 echo ""
 # ── Clean up: cancel test rows written by valid-email/phone tests ──
-echo "--- NOTE: Set booth 44 to Cancelled in sheet (used by valid input tests) ---"
+echo "--- NOTE: Set booths 44 and 45 to Cancelled in sheet (used by valid input tests) ---"
 
 echo ""
 echo "======================================"

@@ -8,12 +8,12 @@ echo "Firing two concurrent booking requests for booth $BOOTH..."
 
 curl -s -X POST "$URL" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "name=Test+User+A&email=testa%40example.com&phone=111&stallname=Stall+A&booths=${BOOTH}&location=Outdoor&total=%24220&agree=true" \
+  -d "name=Test+User+A&email=testa%40example.com&phone=12345&stallname=Stall+A&booths=${BOOTH}&location=Outdoor&total=%24220&agree=true" \
   > /tmp/result_a.json &
 
 curl -s -X POST "$URL" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "name=Test+User+B&email=testb%40example.com&phone=222&stallname=Stall+B&booths=${BOOTH}&location=Outdoor&total=%24220&agree=true" \
+  -d "name=Test+User+B&email=testb%40example.com&phone=67890&stallname=Stall+B&booths=${BOOTH}&location=Outdoor&total=%24220&agree=true" \
   > /tmp/result_b.json &
 
 wait

@@ -7,7 +7,7 @@ BOOTH="45"  # use a booth that's currently free
 echo "=== Test 1: First booking should succeed ==="
 RESULT=$(curl -s -X POST "$URL" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "name=Test+User+A&email=testa%40example.com&phone=111&stallname=Stall+A&booths=${BOOTH}&location=Outdoor&total=%24220&agree=true")
+  -d "name=Test+User+A&email=testa%40example.com&phone=12345&stallname=Stall+A&booths=${BOOTH}&location=Outdoor&total=%24220&agree=true")
 echo "Response: $RESULT"
 if echo "$RESULT" | grep -q '"success":true'; then
   echo "✅ PASS: First booking succeeded."
@@ -20,7 +20,7 @@ echo ""
 echo "=== Test 2: Same booth should be blocked ==="
 RESULT2=$(curl -s -X POST "$URL" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "name=Test+User+B&email=testb%40example.com&phone=222&stallname=Stall+B&booths=${BOOTH}&location=Outdoor&total=%24220&agree=true")
+  -d "name=Test+User+B&email=testb%40example.com&phone=67890&stallname=Stall+B&booths=${BOOTH}&location=Outdoor&total=%24220&agree=true")
 echo "Response: $RESULT2"
 if echo "$RESULT2" | grep -q '"conflict"'; then
   echo "✅ PASS: Duplicate booking was blocked."
