@@ -2,7 +2,7 @@
 # Test: single booking succeeds, then same booth is blocked on second attempt
 
 URL="https://bookingbooth.pages.dev/api/booking"
-BOOTH="45"  # use a booth that's currently free
+BOOTH="47"  # use a booth that's currently free (44/45 used by validation, 46 by concurrent)
 
 echo "=== Test 1: First booking should succeed ==="
 RESULT=$(curl -s -X POST "$URL" \
