@@ -28,11 +28,26 @@
     header {
       background: var(--red);
       color: #fff;
-      text-align: center;
       padding: 14px 16px;
     }
-    header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: 0.3px; }
-    header p  { font-size: 0.82rem; opacity: 0.88; margin-top: 3px; }
+    header > div {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    header #logo { flex-shrink: 0; width: 15%; }
+    header #logo img { width: 100%; height: auto; display: block; }
+    header .header-text { flex: 1; }
+    header h1 { font-size: 2.6rem; font-weight: 700; letter-spacing: 0.3px; }
+    header p  { font-size: 1.2rem; margin-top: 3px; }
+
+    @media (max-width: 600px) {
+      header #logo { width: 22%; }
+      header h1 { font-size: 1.4rem; }
+      header p  { font-size: 0.85rem; margin-top: 2px; }
+    }
 
     /* ── Legend ─────────────────────────────────────────────── */
     .legend {
@@ -59,31 +74,25 @@
     }
 
     /* ── Tabs ───────────────────────────────────────────────── */
-    .tabs {
-      display: flex;
-      border-bottom: 3px solid var(--red);
-    }
+    .tabs { display: flex; border-bottom: 3px solid var(--red); }
     .tab-btn {
       flex: 1;
       padding: 11px 8px;
       background: #fff;
       border: none;
-      font-size: 0.9rem;
+      font-size: 1.4rem;
       font-weight: 600;
       cursor: pointer;
       color: #666;
       transition: background 0.15s, color 0.15s;
     }
-    .tab-btn.active {
-      background: var(--red);
-      color: #fff;
-    }
+    .tab-btn.active { background: var(--red); color: #fff; }
 
     /* ── Floor plan ─────────────────────────────────────────── */
     .floor-scroll {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
-      background: #e8e8e8;
+      background: #fff;
     }
     .floor-wrap {
       position: relative;
@@ -92,15 +101,8 @@
       width: 100%;
       max-width: 1065px;
     }
-    .floor-wrap img {
-      display: block;
-      width: 100%;
-    }
-    .floor-wrap svg {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-    }
+    .floor-wrap img { display: block; width: 100%; }
+    .floor-wrap svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
     .booth-group { cursor: pointer; }
     .booth-group.unavailable { cursor: not-allowed; pointer-events: none; }
     .booth-group.taken       { cursor: not-allowed; }
@@ -122,10 +124,7 @@
       box-shadow: 0 -2px 8px rgba(0,0,0,0.12);
       z-index: 100;
     }
-    .summary-text {
-      flex: 1;
-      min-width: 0;
-    }
+    .summary-text { flex: 1; min-width: 0; }
     .summary-text .label {
       font-size: 0.8rem;
       color: #555;
@@ -133,11 +132,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .summary-text .price {
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--red);
-    }
+    .summary-text .price { font-size: 1rem; font-weight: 700; color: var(--red); }
     .book-btn {
       background: var(--red);
       color: #fff;
@@ -153,7 +148,7 @@
     .book-btn:disabled { background: #bbb; cursor: not-allowed; }
     .bar-spacer { height: 68px; }
 
-    /* ── Modal overlay ──────────────────────────────────────── */
+    /* ── Modal ──────────────────────────────────────────────── */
     .modal-overlay {
       display: none;
       position: fixed;
@@ -175,10 +170,13 @@
       padding: 22px 20px;
     }
     .modal h2 {
-      color: var(--red);
+      background: var(--red);
+      color: #fff;
       text-align: center;
       font-size: 1.1rem;
       margin-bottom: 14px;
+      padding: 10px;
+      border-radius: 6px;
     }
 
     /* Terms box */
@@ -192,9 +190,12 @@
       line-height: 1.65;
     }
     .terms-box h3 {
-      color: var(--red);
+      background: var(--red);
+      color: #fff;
       font-size: 0.85rem;
       margin-bottom: 7px;
+      padding: 6px 10px;
+      border-radius: 4px;
     }
     .terms-box ul { padding-left: 16px; }
     .terms-box li { margin-bottom: 3px; }
@@ -218,11 +219,7 @@
       font-size: 0.78rem;
       font-weight: 600;
     }
-    .total-line {
-      margin-top: 10px;
-      font-size: 0.95rem;
-      font-weight: 700;
-    }
+    .total-line { margin-top: 10px; font-size: 0.95rem; font-weight: 700; }
     .total-line .total-amount { color: var(--red); }
 
     /* Error banner */
@@ -241,30 +238,23 @@
 
     /* Form */
     .form-group { margin-bottom: 13px; }
-    .form-group label {
-      display: block;
-      font-size: 0.82rem;
-      font-weight: 700;
-      margin-bottom: 5px;
-    }
+    .form-group label { display: block; font-size: 0.82rem; font-weight: 700; margin-bottom: 5px; }
     .form-group input {
       width: 100%;
       border: 1.5px solid #ddd;
       border-radius: 6px;
       padding: 9px 11px;
       font-size: 0.9rem;
+      font-family: inherit;
       outline: none;
       transition: border-color 0.2s;
     }
     .form-group input:focus { border-color: var(--red); }
     .form-group input.field-error { border-color: #e00; }
+    .required { color: var(--red); }
 
     /* Modal actions */
-    .form-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 18px;
-    }
+    .form-actions { display: flex; gap: 10px; margin-top: 18px; }
     .btn-cancel {
       flex: 1;
       padding: 10px;
@@ -287,14 +277,17 @@
     }
     .btn-confirm:disabled { background: #bbb; cursor: not-allowed; }
 
-    /* Success */
-    .success-view {
-      text-align: center;
-      padding: 16px 8px;
-    }
+    /* Success view */
+    .success-view { text-align: center; padding: 16px 8px; }
     .success-icon { font-size: 3.2rem; }
-    .success-view h3 { color: var(--green); margin: 12px 0 8px; font-size: 1.1rem; }
-    .success-view p  { color: #666; font-size: 0.85rem; line-height: 1.6; margin-bottom: 18px; }
+    .success-view h3 {
+      color: var(--green);
+      margin: 12px 0 8px;
+      font-size: 1.1rem;
+      background: none;
+      padding: 0;
+    }
+    .success-view p { color: #666; font-size: 0.85rem; line-height: 1.6; margin-bottom: 18px; }
 
     /* Spinner */
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -308,49 +301,87 @@
       margin-right: 6px;
       vertical-align: middle;
     }
+
+    /* ── Info / Rules section ───────────────────────────────── */
+    .info-section {
+      max-width: 960px;
+      margin: 30px auto;
+      padding: 0 16px;
+    }
+    .info-section h2 {
+      background: var(--red);
+      color: #fff;
+      padding: 16px 20px;
+      font-size: 1rem;
+    }
+    .info-section ul {
+      background: #fff;
+      border: 1px solid #cecece;
+      border-top: none;
+      padding: 12px 20px 12px 40px;
+      list-style: decimal;
+    }
+    .info-section li {
+      padding: 7px 0;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      text-align: justify;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .info-section li:last-child { border-bottom: none; }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    .cright { text-align: center; color: #9c9c9c; font-size: 0.8rem; padding: 10px 0; }
+    footer {
+      background: var(--red-dark);
+      color: rgba(255,255,255,0.75);
+      text-align: center;
+      padding: 18px 16px;
+      font-size: 0.82rem;
+      letter-spacing: 0.4px;
+      margin-top: 20px;
+    }
+    footer strong { color: #fff; font-weight: 600; }
   </style>
 </head>
 <body>
 
 <!-- ── Header ───────────────────────────────────────────────── -->
 <header>
-  <h1>🎉 Pemesanan Stand Makanan</h1>
-  <p>Peringatan HUT Kemerdekaan Republik Indonesia ke-80</p>
+  <div>
+    <div id="logo"><img src="logo81.png" alt="HUT RI ke-80"></div>
+    <div class="header-text">
+      <h1>Pemesanan Stand Makanan</h1>
+      <p>Peringatan HUT Kemerdekaan Republik Indonesia ke-80</p>
+    </div>
+  </div>
 </header>
 
 <!-- ── Legend ───────────────────────────────────────────────── -->
 <div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#f5c400;"></div><span>$200</span></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#cc0001;"></div><span>$220</span></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ff85a1;"></div><span>$250</span></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#9b59b6;"></div><span>$250 Food Truck</span></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#27ae60;"></div><span>Dipilih</span></div>
+  <div class="legend-item"><div class="legend-dot" style="background:#888;"></div><span>Sudah Dipesan</span></div>
   <div class="legend-item">
-    <div class="legend-dot" style="background:#f5c400;"></div><span>$200</span>
-  </div>
-  <div class="legend-item">
-    <div class="legend-dot" style="background:#cc0001;"></div><span>$220</span>
-  </div>
-  <div class="legend-item">
-    <div class="legend-dot" style="background:#ff85a1;"></div><span>$250</span>
-  </div>
-  <div class="legend-item">
-    <div class="legend-dot" style="background:#9b59b6;"></div><span>$250 Food Truck</span>
-  </div>
-  <div class="legend-item">
-    <div class="legend-dot" style="background:#27ae60;"></div><span>Dipilih</span>
-  </div>
-  <div class="legend-item">
-    <div class="legend-dot" style="background:#888;"></div><span>Sudah Dipesan</span>
+    <img src="power.svg" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;">
+    <span>Listrik Tersedia</span>
   </div>
 </div>
 
 <!-- ── Tabs ─────────────────────────────────────────────────── -->
 <div class="tabs">
-  <button class="tab-btn active" onclick="switchTab('indoor', this)">🏠 Indoor (1–19)</button>
-  <button class="tab-btn"        onclick="switchTab('outdoor', this)">🌳 Outdoor (20–47)</button>
+  <button class="tab-btn active" onclick="switchTab('indoor', this)">Indoor (1–19)</button>
+  <button class="tab-btn"        onclick="switchTab('outdoor', this)">Outdoor (20–47)</button>
 </div>
 
 <!-- ── Indoor ───────────────────────────────────────────────── -->
 <div class="tab-pane active" id="pane-indoor">
   <div class="floor-scroll">
     <div class="floor-wrap">
-      <img src="indoor.jpeg" alt="Denah Indoor">
+      <img src="Indoor.jpg" alt="Denah Indoor">
       <svg id="svg-indoor" viewBox="0 0 1065 654" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
   </div>
@@ -360,7 +391,7 @@
 <div class="tab-pane" id="pane-outdoor">
   <div class="floor-scroll">
     <div class="floor-wrap">
-      <img src="outdoor.jpeg" alt="Denah Outdoor">
+      <img src="Outdoor.jpg" alt="Denah Outdoor">
       <svg id="svg-outdoor" viewBox="0 0 1065 653" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
   </div>
@@ -383,7 +414,7 @@
 
     <!-- Form view -->
     <div id="form-view">
-      <h2>📋 Formulir Pemesanan</h2>
+      <h2>Formulir Pemesanan</h2>
 
       <div class="terms-box">
         <h3>Syarat &amp; Ketentuan:</h3>
@@ -404,21 +435,38 @@
       <div class="error-msg" id="error-msg"></div>
 
       <div class="form-group">
-        <label for="f-name">Nama Lengkap *</label>
+        <label>Nomor Stand</label>
+        <input type="text" id="f-stall" readonly style="background:#f5f5f5;color:#333;cursor:default;">
+      </div>
+      <div class="form-group">
+        <label for="f-name">Nama Lengkap <span class="required">*</span></label>
         <input type="text" id="f-name" placeholder="Masukkan nama lengkap Anda" autocomplete="name">
       </div>
       <div class="form-group">
-        <label for="f-email">Alamat Email *</label>
+        <label for="f-stallname">Nama Stall <span class="required">*</span></label>
+        <input type="text" id="f-stallname" placeholder="Masukkan nama stall Anda">
+      </div>
+      <div class="form-group">
+        <label for="f-email">Alamat Email <span class="required">*</span></label>
         <input type="email" id="f-email" placeholder="contoh@email.com" autocomplete="email">
       </div>
       <div class="form-group">
-        <label for="f-phone">No. HP / WhatsApp *</label>
+        <label for="f-phone">No. HP / WhatsApp <span class="required">*</span></label>
         <input type="tel" id="f-phone" placeholder="08xxxxxxxxxx" autocomplete="tel">
+      </div>
+
+      <div class="form-group" style="display:flex;align-items:flex-start;gap:10px;">
+        <input type="checkbox" id="f-agree"
+          style="width:auto;margin-top:3px;accent-color:var(--red);flex-shrink:0;"
+          onchange="toggleConfirmBtn()">
+        <label for="f-agree" style="font-size:0.82rem;font-weight:500;cursor:pointer;margin-bottom:0;">
+          Saya menyetujui <strong>Syarat &amp; Ketentuan</strong> di atas <span class="required">*</span>
+        </label>
       </div>
 
       <div class="form-actions">
         <button class="btn-cancel" onclick="closeModal()">Batal</button>
-        <button class="btn-confirm" id="btn-confirm" onclick="submitBooking()">Konfirmasi Pemesanan</button>
+        <button class="btn-confirm" id="btn-confirm" disabled onclick="submitBooking()">Konfirmasi Pemesanan</button>
       </div>
     </div>
 
@@ -427,7 +475,8 @@
       <div class="success-view">
         <div class="success-icon">✅</div>
         <h3>Pemesanan Berhasil!</h3>
-        <p>Konfirmasi telah dikirim ke email Anda.<br>Panitia akan menghubungi Anda untuk informasi pembayaran dalam 1x24 jam.</p>
+        <p>Konfirmasi telah dikirim ke email Anda.<br>
+           Panitia akan menghubungi Anda untuk informasi pembayaran dalam 1×24 jam.</p>
         <button class="btn-confirm" onclick="closeModal()">Tutup</button>
       </div>
     </div>
@@ -435,73 +484,91 @@
   </div>
 </div>
 
-<script>
-// ── Config ────────────────────────────────────────────────────
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyw5-vUfeRTnq5xrbBQ8UI5tnfKOqkAK27L5oCHKmIvanmeg6VdoTB7YkwoFsCyBqtBSQ/exec';
+<!-- ── Info / Rules ──────────────────────────────────────────── -->
+<div class="info-section">
+  <h2>Informasi Dan Peraturan Stall KKIA</h2>
+  <ul>
+    <li>List barang disediakan panitia untuk Vendor Indoor – 1 meja trestle, taplak plastik, label nama stall, dan 2 kursi. Listrik 1 outlet max 1100 watt. Vendor hanya boleh membawa 1 alat listrik dan harus lulus tagging.</li>
+    <li>Vendor Outdoor – 1 meja trestle (tolong info jika tidak perlu meja), taplak plastik, label nama stall. Tenda 3m×3m disiapkan oleh peserta. Tidak tersedia listrik. Peserta harap membawa kompor portable gas masing-masing.</li>
+    <li>Peserta OUTDOOR yang menggunakan alat memasak WAJIB menggunakan Floor covering (tarpaulin/terpal/floormat) untuk menutupi alas rumput. Jika tidak menggunakan terpal, Panitia berhak melarang vendor untuk menggunakan alat memasak.</li>
+    <li>Vendor DILARANG menjual ANEKA MINUMAN (air mineral, teh, minuman kaleng, minuman botol, soda). Jika diketahui menjual produk-produk yang disebutkan maka panitia akan mengambil langkah tegas dan kemungkinan vendor dapat di-blacklist untuk kedepannya.</li>
+    <li>Food certificate harap dibawa pada hari H. Untuk yang meminjam, tolong di-print dan dibawa pada hari H.</li>
+    <li>Pada hari H ketika upacara berlangsung pukul 09.00, aktivitas berjualan harap dihentikan untuk menjaga kekhusyukan upacara. Diminta ada perwakilan dari masing-masing vendor outdoor untuk mengikuti upacara di dalam.</li>
+    <li>Kursi dan meja indoor tidak boleh dibawa keluar.</li>
+    <li>Penunggu stall diharapkan berpakaian rapi dan sopan.</li>
+    <li>Vendor menyiapkan sendiri peralatan yang akan dibawa, alat masak, alat-alat penyajian, plastik sampah, dll. Diharapkan alat-alat yang digunakan sesuai standar yang berlaku.</li>
+    <li>Semua produk yang dijual menjadi tanggung jawab vendor sepenuhnya. Vendor wajib menjaga kebersihan makanan yang dijual dan juga stall masing-masing.</li>
+  </ul>
+</div>
 
-// ── Booth definitions ─────────────────────────────────────────
-// type:'ft' = Food Truck; available:false = blocked/N/A
-// shape:'circle' uses cx,cy,r; default rect uses x,y,w,h
+<p class="cright">&copy; KKIA 17an</p>
+
+<footer>
+  <p>&copy; 2025 <strong>KKIA 17an</strong>. All rights reserved.</p>
+</footer>
+
+<script>
+console.log('Build: __HASH__');
+
 const BOOTHS = {
   indoor: [
-    { id:  1, price: 200,              x: 224, y: 239, w: 43, h: 32 },
-    { id:  2, price: 200,              x: 272, y: 239, w: 43, h: 32 },
-    { id:  3, price: 220,              x: 356, y: 106, w: 38, h: 42 },
-    { id:  4, price: 220,              x: 356, y: 152, w: 38, h: 40 },
-    { id:  5, price: 250,              x: 449, y: 106, w: 40, h: 32 },
-    { id:  6, price: 250,              x: 494, y: 106, w: 40, h: 32 },
-    { id:  7, price: 250,              x: 427, y: 162, w: 40, h: 37 },
-    { id:  8, price: 250,              x: 427, y: 203, w: 40, h: 37 },
-    { id:  9, price: 220,              x: 232, y: 297, w: 42, h: 33 },
-    { id: 10, price: 220,              x: 278, y: 297, w: 42, h: 33 },
-    { id: 11, price: 200,              x: 229, y: 383, w: 45, h: 33 },
-    { id: 12, price: 200,              x: 278, y: 383, w: 45, h: 33 },
-    { id: 13, price: 220,              x: 350, y: 373, w: 37, h: 48 },
-    { id: 14, price: 250,              x: 422, y: 343, w: 40, h: 37 },
-    { id: 15, price: 220,              x: 350, y: 425, w: 37, h: 42 },
-    { id: 16, price: 250,              x: 422, y: 384, w: 40, h: 37 },
-    { id: 17, price: 250,              x: 450, y: 434, w: 40, h: 33 },
-    { id: 18, price: 250,              x: 494, y: 434, w: 40, h: 33 },
-    { id: 19, price: 250, type: 'ft', shape: 'circle', cx: 455, cy: 533, r: 31 },
+    { id:  1, price: 200,             x: 282, y: 160, w: 43, h: 32 },
+    { id:  2, price: 200,             x: 332, y: 160, w: 43, h: 32 },
+    { id:  3, price: 220,             x: 432, y:  96, w: 33, h: 43 },
+    { id:  4, price: 220,             x: 432, y: 146, w: 33, h: 43 },
+    { id:  5, price: 250,             x: 534, y: 122, w: 40, h: 32 },
+    { id:  6, price: 250,             x: 578, y: 122, w: 40, h: 32 },
+    { id:  7, price: 250,             x: 510, y: 158, w: 33, h: 43 },
+    { id:  8, price: 250,             x: 510, y: 206, w: 33, h: 43 },
+    { id:  9, price: 220,             x: 297, y: 262, w: 33, h: 43 },
+    { id: 10, price: 220,             x: 335, y: 262, w: 33, h: 43 },
+    { id: 11, price: 200,             x: 282, y: 378, w: 45, h: 33 },
+    { id: 12, price: 200,             x: 332, y: 378, w: 45, h: 33 },
+    { id: 13, price: 220,             x: 412, y: 380, w: 33, h: 43 },
+    { id: 14, price: 250,             x: 498, y: 340, w: 33, h: 43 },
+    { id: 15, price: 220,             x: 412, y: 428, w: 33, h: 43 },
+    { id: 16, price: 250,             x: 498, y: 388, w: 33, h: 43 },
+    { id: 17, price: 250,             x: 524, y: 434, w: 40, h: 33 },
+    { id: 18, price: 250,             x: 568, y: 434, w: 40, h: 33 },
+    { id: 19, price: 250, type: 'ft', shape: 'circle', cx: 400, cy: 553, r: 31 },
   ],
   outdoor: [
-    { id: 20, price: 250, type: 'ft', x: 376, y:  78, w: 38, h: 33 },
-    { id: 21, price: 220,             x: 450, y: 147, w: 37, h: 30 },
-    { id: 22, price: 220,             x: 491, y: 147, w: 37, h: 30 },
-    { id: 23, price: 220,             x: 532, y: 147, w: 37, h: 30 },
-    { id: 24, price: 220,             x: 573, y: 147, w: 37, h: 30 },
-    { id: 25, price: 220,             x: 614, y: 147, w: 37, h: 30 },
-    { id: 26, price: 220,             x: 655, y: 147, w: 37, h: 30 },
-    { id: 27, price:   0, available: false, x: 450, y: 236, w: 37, h: 30 },
-    { id: 28, price: 220,             x: 491, y: 236, w: 37, h: 30 },
-    { id: 29, price: 220,             x: 532, y: 236, w: 37, h: 30 },
-    { id: 30, price: 220,             x: 573, y: 236, w: 37, h: 30 },
-    { id: 31, price: 220,             x: 614, y: 236, w: 37, h: 30 },
-    { id: 32, price: 220,             x: 637, y: 236, w: 37, h: 30 },
-    { id: 33, price: 200,             x: 628, y: 270, w: 37, h: 30 },
-    { id: 34, price: 200,             x: 669, y: 270, w: 37, h: 30 },
-    { id: 35, price: 250,             x: 407, y: 378, w: 37, h: 30 },
-    { id: 36, price: 250,             x: 448, y: 378, w: 37, h: 30 },
-    { id: 37, price: 250,             x: 489, y: 378, w: 37, h: 30 },
-    { id: 38, price: 250,             x: 530, y: 378, w: 37, h: 30 },
-    { id: 39, price: 200,             x: 571, y: 378, w: 37, h: 30 },
-    { id: 40, price: 200,             x: 612, y: 378, w: 37, h: 30 },
-    { id: 41, price: 220,             x: 624, y: 355, w: 37, h: 30 },
-    { id: 42, price: 220,             x: 665, y: 355, w: 37, h: 30 },
-    { id: 43, price: 200,             x: 388, y: 447, w: 37, h: 30 },
-    { id: 44, price: 220,             x: 447, y: 465, w: 37, h: 30 },
-    { id: 45, price: 220,             x: 481, y: 488, w: 37, h: 30 },
-    { id: 46, price: 220,             x: 515, y: 508, w: 37, h: 30 },
-    { id: 47, price: 220,             x: 550, y: 528, w: 37, h: 30 },
+    { id: 20, price: 250, type: 'ft', x: 405, y:  72, w: 38, h: 33 },
+    { id: 21, price: 220,             x: 494, y: 152, w: 37, h: 30 },
+    { id: 22, price: 220,             x: 541, y: 152, w: 37, h: 30 },
+    { id: 23, price: 220,             x: 592, y: 152, w: 37, h: 30 },
+    { id: 24, price: 220,             x: 648, y: 152, w: 37, h: 30 },
+    { id: 25, price: 220,             x: 698, y: 152, w: 37, h: 30 },
+    { id: 26, price: 220,             x: 745, y: 152, w: 37, h: 30 },
+    { id: 27, price:   0, available: false, x: 488, y: 256, w: 37, h: 30 },
+    { id: 28, price: 220,             x: 528, y: 256, w: 37, h: 30 },
+    { id: 29, price: 220,             x: 568, y: 256, w: 37, h: 30 },
+    { id: 30, price: 220,             x: 608, y: 256, w: 37, h: 30 },
+    { id: 31, price: 220,             x: 648, y: 256, w: 37, h: 30 },
+    { id: 32, price: 220,             x: 688, y: 256, w: 37, h: 30 },
+    { id: 33, price: 200,             x: 728, y: 296, w: 37, h: 30 },
+    { id: 34, price: 200,             x: 776, y: 296, w: 37, h: 30 },
+    { id: 35, price: 250,             x: 447, y: 420, w: 37, h: 30 },
+    { id: 36, price: 250,             x: 488, y: 420, w: 37, h: 30 },
+    { id: 37, price: 250,             x: 529, y: 420, w: 37, h: 30 },
+    { id: 38, price: 250,             x: 568, y: 420, w: 37, h: 30 },
+    { id: 39, price: 200,             x: 608, y: 420, w: 37, h: 30 },
+    { id: 40, price: 200,             x: 648, y: 420, w: 37, h: 30 },
+    { id: 41, price: 220,             x: 698, y: 397, w: 37, h: 30 },
+    { id: 42, price: 220,             x: 746, y: 397, w: 37, h: 30 },
+    { id: 43, price: 200,             x: 432, y: 494, w: 37, h: 30 },
+    { id: 44, price: 220,             x: 494, y: 515, w: 37, h: 30 },
+    { id: 45, price: 220,             x: 534, y: 532, w: 37, h: 30 },
+    { id: 46, price: 220,             x: 574, y: 552, w: 37, h: 30 },
+    { id: 47, price: 220,             x: 614, y: 578, w: 37, h: 30 },
   ]
 };
 
 const PRICE_COLOR = { 200: '#f5c400', 220: '#cc0001', 250: '#ff85a1', ft: '#9b59b6' };
 const ALL_BOOTHS  = [...BOOTHS.indoor, ...BOOTHS.outdoor];
 
-// ── App state ─────────────────────────────────────────────────
-const selected = new Set(); // booth IDs the current user has picked
-const taken    = new Set(); // booth IDs confirmed booked in the sheet
+const selected = new Set();
+const taken    = new Set();
 
 // ── Colour helper ─────────────────────────────────────────────
 function boothColor(booth) {
@@ -543,7 +610,7 @@ function buildSVG(tab) {
       ly = booth.y + booth.h / 2;
     }
     shape.setAttribute('fill',         fill);
-    shape.setAttribute('fill-opacity', '0.62');
+    shape.setAttribute('fill-opacity', '0.90');
     shape.setAttribute('stroke',       stroke);
     shape.setAttribute('stroke-width', '1.5');
 
@@ -567,14 +634,25 @@ function buildSVG(tab) {
 
     g.appendChild(shape);
     g.appendChild(text);
+
+    // Power icon on indoor rect booths (1–18; not Food Truck circle)
+    if (tab === 'indoor' && booth.shape !== 'circle') {
+      const iconSize = 20;
+      const icon = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+      icon.setAttribute('href', 'power.svg');
+      icon.setAttribute('x', booth.x + booth.w - iconSize);
+      icon.setAttribute('y', booth.y + booth.h - iconSize);
+      icon.setAttribute('width',  iconSize);
+      icon.setAttribute('height', iconSize);
+      icon.setAttribute('pointer-events', 'none');
+      g.appendChild(icon);
+    }
+
     svg.appendChild(g);
   });
 }
 
-function redrawSVGs() {
-  buildSVG('indoor');
-  buildSVG('outdoor');
-}
+function redrawSVGs() { buildSVG('indoor'); buildSVG('outdoor'); }
 
 // ── Toggle selection ──────────────────────────────────────────
 function toggleBooth(id) {
@@ -584,16 +662,12 @@ function toggleBooth(id) {
   updateBar();
 }
 
-// ── Mark booths as taken (booked or conflict) ─────────────────
-function markTaken(id) {
-  taken.add(id);
-  selected.delete(id);
-}
+function markTaken(id) { taken.add(id); selected.delete(id); }
 
 // ── Lookup helpers ────────────────────────────────────────────
-function getMeta(id)      { return ALL_BOOTHS.find(b => b.id === id); }
-function isIndoor(id)     { return !!BOOTHS.indoor.find(b => b.id === id); }
-function computeTotal()   { return [...selected].reduce((s, id) => s + (getMeta(id)?.price ?? 0), 0); }
+function getMeta(id)    { return ALL_BOOTHS.find(b => b.id === id); }
+function isIndoor(id)   { return !!BOOTHS.indoor.find(b => b.id === id); }
+function computeTotal() { return [...selected].reduce((s, id) => s + (getMeta(id)?.price ?? 0), 0); }
 
 // ── Summary bar ───────────────────────────────────────────────
 function updateBar() {
@@ -602,7 +676,7 @@ function updateBar() {
   const btnEl   = document.getElementById('book-btn');
 
   if (selected.size === 0) {
-    labelEl.textContent  = 'Belum ada stand dipilih';
+    labelEl.textContent   = 'Belum ada stand dipilih';
     priceEl.style.display = 'none';
     btnEl.disabled = true;
   } else {
@@ -610,7 +684,7 @@ function updateBar() {
     labelEl.textContent = 'Stand: ' + sorted.map(id =>
       `#${id} (${isIndoor(id) ? 'In' : 'Out'})`
     ).join(', ');
-    priceEl.textContent  = 'Total: $' + computeTotal().toLocaleString();
+    priceEl.textContent   = 'Total: $' + computeTotal().toLocaleString();
     priceEl.style.display = '';
     btnEl.disabled = false;
   }
@@ -637,24 +711,34 @@ function populateModalSummary() {
     tags.appendChild(tag);
   });
   document.getElementById('modal-total').textContent = '$' + computeTotal().toLocaleString();
+  const sorted = [...selected].sort((a, b) => a - b);
+  document.getElementById('f-stall').value = sorted.map(id =>
+    `Stand #${id} (${isIndoor(id) ? 'Indoor' : 'Outdoor'})`
+  ).join(', ');
 }
 
 function openModal() {
   if (selected.size === 0) return;
   populateModalSummary();
   hideError();
-  document.getElementById('form-view').style.display   = '';
+  document.getElementById('form-view').style.display    = '';
   document.getElementById('success-view').style.display = 'none';
   document.getElementById('modal').classList.add('open');
 }
 
+function toggleConfirmBtn() {
+  document.getElementById('btn-confirm').disabled = !document.getElementById('f-agree').checked;
+}
+
 function closeModal() {
   document.getElementById('modal').classList.remove('open');
-  ['f-name', 'f-email', 'f-phone'].forEach(id => {
+  ['f-name', 'f-stallname', 'f-email', 'f-phone'].forEach(id => {
     const el = document.getElementById(id);
     el.value = '';
     el.classList.remove('field-error');
   });
+  document.getElementById('f-agree').checked = false;
+  document.getElementById('btn-confirm').disabled = true;
 }
 
 function onOverlayClick(e) {
@@ -666,58 +750,48 @@ function showError(msg) {
   el.textContent = msg;
   el.classList.add('show');
 }
-
-function hideError() {
-  document.getElementById('error-msg').classList.remove('show');
-}
+function hideError() { document.getElementById('error-msg').classList.remove('show'); }
 
 // ── Booking submission ────────────────────────────────────────
 async function submitBooking() {
   hideError();
 
-  const nameEl  = document.getElementById('f-name');
-  const emailEl = document.getElementById('f-email');
-  const phoneEl = document.getElementById('f-phone');
+  const nameEl      = document.getElementById('f-name');
+  const stallnameEl = document.getElementById('f-stallname');
+  const emailEl     = document.getElementById('f-email');
+  const phoneEl     = document.getElementById('f-phone');
 
-  [nameEl, emailEl, phoneEl].forEach(el => el.classList.remove('field-error'));
+  [nameEl, stallnameEl, emailEl, phoneEl].forEach(el => el.classList.remove('field-error'));
 
-  const name  = nameEl.value.trim();
-  const email = emailEl.value.trim();
-  const phone = phoneEl.value.trim();
+  const name      = nameEl.value.trim();
+  const stallname = stallnameEl.value.trim();
+  const email     = emailEl.value.trim();
+  const phone     = phoneEl.value.trim();
 
   let valid = true;
-  if (!name)  { nameEl.classList.add('field-error');  valid = false; }
-  if (!email || !email.includes('@')) { emailEl.classList.add('field-error'); valid = false; }
-  if (!phone) { phoneEl.classList.add('field-error'); valid = false; }
+  if (!name)                          { nameEl.classList.add('field-error');      valid = false; }
+  if (!stallname)                     { stallnameEl.classList.add('field-error'); valid = false; }
+  if (!email || !email.includes('@')) { emailEl.classList.add('field-error');     valid = false; }
+  if (!phone)                         { phoneEl.classList.add('field-error');     valid = false; }
 
-  if (!valid) {
-    showError('Harap isi semua kolom dengan benar.');
-    return;
-  }
+  if (!valid) { showError('Harap isi semua kolom dengan benar.'); return; }
 
-  const ids    = [...selected].sort((a, b) => a - b);
-  const inIds  = ids.filter(id => isIndoor(id));
-  const outIds = ids.filter(id => !isIndoor(id));
+  const ids      = [...selected].sort((a, b) => a - b);
+  const inIds    = ids.filter(id =>  isIndoor(id));
+  const outIds   = ids.filter(id => !isIndoor(id));
   const location = inIds.length && outIds.length ? 'Indoor & Outdoor'
                  : inIds.length ? 'Indoor' : 'Outdoor';
 
   const btn = document.getElementById('btn-confirm');
-  btn.disabled = true;
+  btn.disabled  = true;
   btn.innerHTML = '<span class="spinner"></span>Memproses...';
 
   try {
-    const body = new URLSearchParams({
-      name,
-      email,
-      phone,
-      booths:   ids.join(', '),
-      location,
-      total:    '$' + computeTotal()
-    });
+    const body = new URLSearchParams({ name, stallname, email, phone,
+      booths: ids.join(', '), location, total: '$' + computeTotal() });
 
-    // POST via Netlify proxy (server-to-server, no CORS, response is readable)
     const res  = await fetch('/.netlify/functions/booking', {
-      method:  'POST',
+      method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body
     });
@@ -729,7 +803,7 @@ async function submitBooking() {
       selected.clear();
       redrawSVGs();
       updateBar();
-      document.getElementById('form-view').style.display   = 'none';
+      document.getElementById('form-view').style.display    = 'none';
       document.getElementById('success-view').style.display = '';
 
     } else if (data.conflict && data.conflict.length) {
@@ -750,12 +824,12 @@ async function submitBooking() {
     showError('Tidak dapat terhubung ke server. Periksa koneksi internet Anda dan coba lagi.');
     console.error('Booking error:', err);
   } finally {
-    btn.disabled = false;
+    btn.disabled  = false;
     btn.innerHTML = 'Konfirmasi Pemesanan';
   }
 }
 
-// ── Load currently booked booths via Netlify proxy ───────────
+// ── Load currently booked booths via Netlify proxy ────────────
 async function loadBooked() {
   try {
     const res  = await fetch('/.netlify/functions/booked');
@@ -770,8 +844,6 @@ async function loadBooked() {
   updateBar();
 }
 
-// ── Boot ──────────────────────────────────────────────────────
-console.log('Build: __HASH__');
 loadBooked();
 </script>
 </body>

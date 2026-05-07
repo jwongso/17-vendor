@@ -36,9 +36,9 @@ function getBooked() {
 
   const booked = [];
   for (let i = 1; i < rows.length; i++) {
-    const status = rows[i][7]; // column H
+    const status = rows[i][8]; // column I (Status)
     if (status === 'Cancelled') continue;
-    String(rows[i][4]).split(',').forEach(s => {
+    String(rows[i][5]).split(',').forEach(s => { // column F (Booths)
       const n = parseInt(s.trim());
       if (!isNaN(n)) booked.push(n);
     });
@@ -74,8 +74,8 @@ function handleBooking(params) {
     // Check every Active row for overlap with requested booths
     const conflict = [];
     for (let i = 1; i < rows.length; i++) {
-      if (rows[i][7] === 'Cancelled') continue;
-      String(rows[i][4]).split(',').forEach(s => {
+      if (rows[i][8] === 'Cancelled') continue; // column I (Status)
+      String(rows[i][5]).split(',').forEach(s => { // column F (Booths)
         const n = parseInt(s.trim());
         if (requested.includes(n) && !conflict.includes(n)) conflict.push(n);
       });
@@ -90,14 +90,16 @@ function handleBooking(params) {
     // No conflict: write the booking row
     const timestamp = new Date();
     sheet.appendRow([
-      timestamp,      // A: Timestamp
-      params.name,    // B: Name
-      params.email,   // C: Email
-      params.phone,   // D: Phone
-      params.booths,  // E: Booths
-      params.location,// F: Location
-      params.total,   // G: Total
-      'Active'        // H: Status  (change to 'Cancelled' to unblock)
+      timestamp,           // A: Timestamp
+      params.name,         // B: Name
+      params.email,        // C: Email
+      params.phone,        // D: Phone
+      params.stallname,    // E: Stall Name
+      params.booths,       // F: Booths
+      params.location,     // G: Location
+      params.total,        // H: Total
+      'Active'             // I: Status  (change to 'Cancelled' to unblock)
+    ]);
     ]);
 
     // Confirmation email to the vendor (non-fatal if it fails)
@@ -118,6 +120,10 @@ function handleBooking(params) {
                 <td style="padding:8px 12px;"><strong>#${params.booths}</strong></td>
               </tr>
               <tr>
+                <td style="padding:8px 12px; color:#666;">Nama Stall</td>
+                <td style="padding:8px 12px;"><strong>${params.stallname}</strong></td>
+              </tr>
+              <tr style="background:#f9f9f9;">
                 <td style="padding:8px 12px; color:#666;">Lokasi</td>
                 <td style="padding:8px 12px;">${params.location}</td>
               </tr>
@@ -171,6 +177,10 @@ function handleBooking(params) {
                 <td style="padding:8px 12px;"><strong>#${params.booths}</strong></td>
               </tr>
               <tr style="background:#f9f9f9;">
+                <td style="padding:8px 12px; color:#666;">Nama Stall</td>
+                <td style="padding:8px 12px;"><strong>${params.stallname}</strong></td>
+              </tr>
+              <tr>
                 <td style="padding:8px 12px; color:#666;">Lokasi</td>
                 <td style="padding:8px 12px;">${params.location}</td>
               </tr>
@@ -185,7 +195,10 @@ function handleBooking(params) {
             </table>
             <hr style="margin:16px 0; border:none; border-top:1px solid #ddd;">
             <p style="font-size:12px; color:#888;">
-              Untuk membatalkan / mereset stand: buka Google Sheet → kolom H (Status) → ubah menjadi <strong>Cancelled</strong>.
+              Untuk membatalkan / mereset stand: buka Google Sheet → kolom I (Status) → ubah menjadi <strong>Cancelled</strong>.
+            </p>
+            <p style="font-size:12px; margin-top:8px;">
+              🔗 <a href="${SpreadsheetApp.getActiveSpreadsheet().getUrl()}" style="color:#CC0001;">Buka Google Sheet</a>
             </p>
           </div>
         `
