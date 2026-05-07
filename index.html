@@ -555,14 +555,14 @@ const BOOTHS = {
     { id: 24, price: 220,             x: 648, y: 152, w: 37, h: 30 },
     { id: 25, price: 220,             x: 698, y: 152, w: 37, h: 30 },
     { id: 26, price: 220,             x: 745, y: 152, w: 37, h: 30 },
-    { id: 27, price: 220, color: '#ff85a1', x: 488, y: 256, w: 37, h: 30 },
+    { id: 27, price: 220, available: false, label: 'KKIA', x: 488, y: 256, w: 37, h: 30 },
     { id: 28, price: 220, color: '#ff85a1', x: 528, y: 256, w: 37, h: 30 },
     { id: 29, price: 220, color: '#ff85a1', x: 568, y: 256, w: 37, h: 30 },
     { id: 30, price: 220,             x: 608, y: 256, w: 37, h: 30 },
     { id: 31, price: 220,             x: 648, y: 256, w: 37, h: 30 },
     { id: 32, price: 220,             x: 688, y: 256, w: 37, h: 30 },
-    { id: 33, price: 200,             x: 728, y: 296, w: 37, h: 30 },
-    { id: 34, price: 200,             x: 776, y: 296, w: 37, h: 30 },
+    { id: 33, price: 200, color: '#cc0001', x: 728, y: 296, w: 37, h: 30 },
+    { id: 34, price: 200, color: '#f5c400', x: 776, y: 296, w: 37, h: 30 },
     { id: 35, price: 250,             x: 447, y: 420, w: 37, h: 30 },
     { id: 36, price: 250,             x: 488, y: 420, w: 37, h: 30 },
     { id: 37, price: 250,             x: 529, y: 420, w: 37, h: 30 },
@@ -570,7 +570,7 @@ const BOOTHS = {
     { id: 39, price: 200,             x: 608, y: 420, w: 37, h: 30 },
     { id: 40, price: 200, color: '#cc0001', x: 648, y: 420, w: 37, h: 30 },
     { id: 41, price: 220,             x: 698, y: 397, w: 37, h: 30 },
-    { id: 42, price: 220,             x: 746, y: 397, w: 37, h: 30 },
+    { id: 42, price: 220, color: '#f5c400', x: 746, y: 397, w: 37, h: 30 },
     { id: 43, price: 200,             x: 432, y: 494, w: 37, h: 30 },
     { id: 44, price: 220,             x: 494, y: 515, w: 37, h: 30 },
     { id: 45, price: 220,             x: 534, y: 532, w: 37, h: 30 },
@@ -652,8 +652,12 @@ function buildSVG(tab) {
     g.appendChild(shape);
     g.appendChild(text);
 
-    // Tooltip for taken booths
-    if (taken.has(booth.id) && bookedNames[booth.id]) {
+    // Tooltip for taken booths or permanently unavailable
+    if (booth.available === false) {
+      const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      title.textContent = booth.label || 'Tidak tersedia';
+      g.appendChild(title);
+    } else if (taken.has(booth.id) && bookedNames[booth.id]) {
       const info  = bookedNames[booth.id];
       const label = info.stallname ? `${info.stallname} (${info.name})` : info.name;
       const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
@@ -695,9 +699,15 @@ function getMeta(id)    { return ALL_BOOTHS.find(b => b.id === id); }
 function isIndoor(id)   { return !!BOOTHS.indoor.find(b => b.id === id); }
 function computeTotal() {
   const subtotal = [...selected].reduce((s, id) => s + (getMeta(id)?.price ?? 0), 0);
-  return selected.size >= 2 ? Math.round(subtotal * 0.9) : subtotal;
+  if (selected.size >= 3) return Math.round(subtotal * 0.9);
+  if (selected.size === 2) return Math.round(subtotal * 0.95);
+  return subtotal;
 }
-function hasDiscount()  { return selected.size >= 2; }
+function discountLabel() {
+  if (selected.size >= 3) return ' (disc 10%)';
+  if (selected.size === 2) return ' (disc 5%)';
+  return '';
+}
 
 // ── Summary bar ───────────────────────────────────────────────
 function updateBar() {
@@ -714,7 +724,7 @@ function updateBar() {
     labelEl.textContent = 'Stand: ' + sorted.map(id =>
       `#${id} (${isIndoor(id) ? 'In' : 'Out'})`
     ).join(', ');
-    priceEl.textContent   = 'Total: $' + computeTotal().toLocaleString() + (hasDiscount() ? ' (disc 10%)' : '');
+    priceEl.textContent   = 'Total: $' + computeTotal().toLocaleString() + discountLabel();
     priceEl.style.display = '';
     btnEl.disabled = false;
   }
@@ -740,7 +750,7 @@ function populateModalSummary() {
     tag.textContent = `#${id} ${loc} – $${meta.price}`;
     tags.appendChild(tag);
   });
-  document.getElementById('modal-total').textContent = '$' + computeTotal().toLocaleString() + (hasDiscount() ? ' (disc 10%)' : '');
+  document.getElementById('modal-total').textContent = '$' + computeTotal().toLocaleString() + discountLabel();
   const sorted = [...selected].sort((a, b) => a - b);
   document.getElementById('f-stall').value = sorted.map(id =>
     `Stand #${id} (${isIndoor(id) ? 'Indoor' : 'Outdoor'})`
