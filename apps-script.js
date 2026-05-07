@@ -71,6 +71,41 @@ function getBooked() {
 // Returns: { success: true }
 //       or { success: false, conflict: [5, 21] }
 function handleBooking(params) {
+  // ── Server-side input validation ────────────────────────────
+  const name      = String(params.name      || '').trim();
+  const stallname = String(params.stallname || '').trim();
+  const email     = String(params.email     || '').trim();
+  const phone     = String(params.phone     || '').trim();
+  const booths    = String(params.booths    || '').trim();
+  const location  = String(params.location  || '').trim();
+  const total     = String(params.total     || '').trim();
+
+  if (!name || !stallname || !email || !phone || !booths || !location || !total) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: 'Semua field wajib diisi.' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: 'Format email tidak valid.' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  if (!/^[\d\s\+\-\(\)]{5,20}$/.test(phone)) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: 'Format nomor HP tidak valid.' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const requested = booths.split(',')
+    .map(s => parseInt(s.trim()))
+    .filter(n => !isNaN(n) && n >= 1 && n <= 47);
+
+  if (requested.length === 0) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: 'Nomor stall tidak valid.' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(15000)) {
     return ContentService
@@ -81,11 +116,6 @@ function handleBooking(params) {
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
     const rows  = sheet.getDataRange().getDisplayValues(); // getDisplayValues avoids Date auto-conversion
-
-    const requested = String(params.booths)
-      .split(',')
-      .map(s => parseInt(s.trim()))
-      .filter(n => !isNaN(n));
 
     // Check every Active row for overlap with requested booths
     const conflict = [];
@@ -109,15 +139,15 @@ function handleBooking(params) {
     const lastRow = sheet.getLastRow() + 1;
     sheet.getRange(lastRow, 6).setNumberFormat('@');
     sheet.getRange(lastRow, 1, 1, 9).setValues([[
-      timestamp,           // A: Timestamp
-      params.name,         // B: Name
-      params.email,        // C: Email
-      params.phone,        // D: Phone
-      params.stallname,    // E: Stall Name
-      params.booths,       // F: Booths  (plain text — no date conversion)
-      params.location,     // G: Location
-      params.total,        // H: Total
-      'Active'             // I: Status  (change to 'Cancelled' to unblock)
+      timestamp,   // A: Timestamp
+      name,        // B: Name
+      email,       // C: Email
+      phone,       // D: Phone
+      stallname,   // E: Stall Name
+      booths,      // F: Booths  (plain text — no date conversion)
+      location,    // G: Location
+      total,       // H: Total
+      'Active'     // I: Status  (change to 'Cancelled' to unblock)
     ]]);
 
     // Confirmation email to the vendor (non-fatal if it fails)
