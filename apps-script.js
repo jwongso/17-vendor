@@ -80,7 +80,7 @@ function handleBooking(params) {
 
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-    const rows  = sheet.getDataRange().getValues();
+    const rows  = sheet.getDataRange().getDisplayValues(); // getDisplayValues avoids Date auto-conversion
 
     const requested = String(params.booths)
       .split(',')
@@ -104,18 +104,21 @@ function handleBooking(params) {
     }
 
     // No conflict: write the booking row
+    // Set column F to plain text BEFORE writing to prevent Sheets date auto-conversion
     const timestamp = new Date();
-    sheet.appendRow([
+    const lastRow = sheet.getLastRow() + 1;
+    sheet.getRange(lastRow, 6).setNumberFormat('@');
+    sheet.getRange(lastRow, 1, 1, 9).setValues([[
       timestamp,           // A: Timestamp
       params.name,         // B: Name
       params.email,        // C: Email
       params.phone,        // D: Phone
       params.stallname,    // E: Stall Name
-      params.booths,       // F: Booths
+      params.booths,       // F: Booths  (plain text — no date conversion)
       params.location,     // G: Location
       params.total,        // H: Total
       'Active'             // I: Status  (change to 'Cancelled' to unblock)
-    ]);
+    ]]);
 
     // Confirmation email to the vendor (non-fatal if it fails)
     try {
