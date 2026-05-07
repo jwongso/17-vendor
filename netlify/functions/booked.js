@@ -4,7 +4,7 @@ const https = require('https');
 const http  = require('http');
 const { URL } = require('url');
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyw5-vUfeRTnq5xrbBQ8UI5tnfKOqkAK27L5oCHKmIvanmeg6VdoTB7YkwoFsCyBqtBSQ/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxv0JGRgrgjQLLBwdpP0KNW_M_JCSBhX_IfRj1G6eXw2iMExrNsC-wHb5QttN-0rRpfxA/exec';
 
 function get(urlStr, redirects) {
   if (redirects > 10) return Promise.reject(new Error('Too many redirects'));
