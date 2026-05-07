@@ -694,9 +694,9 @@ function getMeta(id)    { return ALL_BOOTHS.find(b => b.id === id); }
 function isIndoor(id)   { return !!BOOTHS.indoor.find(b => b.id === id); }
 function computeTotal() {
   const subtotal = [...selected].reduce((s, id) => s + (getMeta(id)?.price ?? 0), 0);
-  return selected.size > 2 ? Math.round(subtotal * 0.9) : subtotal;
+  return selected.size >= 2 ? Math.round(subtotal * 0.9) : subtotal;
 }
-function hasDiscount()  { return selected.size > 2; }
+function hasDiscount()  { return selected.size >= 2; }
 
 // ── Summary bar ───────────────────────────────────────────────
 function updateBar() {
