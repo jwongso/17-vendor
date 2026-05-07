@@ -58,8 +58,19 @@
 
     @media (max-width: 600px) {
       header #logo { width: 22%; }
-      header h1 { font-size: 1.4rem; }
-      header p  { font-size: 0.85rem; margin-top: 2px; }
+      header h1 { font-size: 1.2rem; }
+      header p  { font-size: 0.7rem; margin-top: 2px; }
+      .tab-btn {
+      flex: 1;
+      padding: 11px 8px;
+      background: #fff;
+      border: none;
+      font-size: 1.2rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: #666;
+      transition: background 0.15s, color 0.15s;
+    }
     }
 
     /* ── Legend ─────────────────────────────────────────────── */
@@ -322,6 +333,7 @@
       max-width: 960px;
       margin: 30px auto;
       padding: 0 16px;
+      text-align:left;
     }
     .info-section h2 {
       background: var(--red);
@@ -342,8 +354,63 @@
       line-height: 1.6;
       text-align: justify;
       border-bottom: 1px solid #f0f0f0;
+      text-align:left;
     }
     .info-section li:last-child { border-bottom: none; }
+
+	ul.indnt {
+      padding: 12px 0px 12px 40px;
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+    ul.indnt li { border-bottom: none; line-height: 1.6; padding:0}
+
+
+	
+    /* ── Vendor cards (as list items 1 & 2) ────────────────────── */
+    .vendor-title {
+      font-size: 0.92rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-align: center;
+      padding: 7px 12px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      color: #fff;
+    }
+    .vendor-title.indoor  { background: var(--red); }
+    .vendor-title.outdoor { background: #2c3e50; }
+    .vendor-group { margin-bottom: 8px; }
+    .vendor-group-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+      letter-spacing: 0.3px;
+    }
+    .vendor-group-label.yes { background: #e8f8ee; color: #1a7a3c; border-left: 3px solid #27ae60; }
+    .vendor-group-label.no  { background: #fff3f3; color: #a00;    border-left: 3px solid #cc0001; }
+    .vendor-group ul {
+      list-style: none;
+      padding-left: 8px;
+    }
+    .vendor-group:last-child ul {
+      padding-left: 24px;
+    }
+    .vendor-group ul li {
+      font-size: 0.83rem;
+      padding: 3px 0;
+      line-height: 1.5;
+      border-bottom: none;
+      display: flex;
+      gap: 6px;
+    }
+    .vendor-group ul li::before {
+      content: "•";
+      color: #aaa;
+      flex-shrink: 0;
+    }
 
     /* ── Footer ─────────────────────────────────────────────── */
     .cright { text-align: center; color: #9c9c9c; font-size: 0.8rem; padding: 10px 0; }
@@ -357,6 +424,10 @@
       margin-top: 20px;
     }
     footer strong { color: #fff; font-weight: 600; }
+    .footer-social { text-align: center; padding: 12px 0 4px; }
+    .footer-social a { display: inline-flex; align-items: center; gap: 6px; color: #c0392b; font-size: 0.82rem; text-decoration: none; font-weight: 600; transition: color 0.2s; }
+    .footer-social a:hover { color: #e74c3c; }
+    .footer-social svg { width: 22px; height: 22px; }
   </style>
 </head>
 <body>
@@ -505,24 +576,49 @@
 <div class="info-section">
   <h2>Informasi dan Peraturan Stall KKIA</h2>
   <ol>
-    <li>List barang disediakan panitia untuk Vendor Indoor – 1 meja trestle, taplak plastik, label nama stall, dan 2 kursi. Listrik 1 outlet max 1100 watt. Vendor hanya boleh membawa 1 alat listrik dan harus lulus tagging. Jadwal tagging akan diinfokan oleh panitia menjelang acara.</li>
-    <li>Vendor Outdoor – 1 meja trestle (tolong info jika tidak perlu meja), taplak plastik, label nama stall. Tenda 3m×3m disiapkan oleh peserta. Tidak tersedia listrik. Peserta harap membawa kompor portable gas masing-masing.</li>
-    <li>Peserta OUTDOOR yang menggunakan alat memasak WAJIB menggunakan Floor covering (tarpaulin/terpal/floormat) untuk menutupi alas rumput. Jika tidak menggunakan terpal, Panitia berhak melarang vendor untuk menggunakan alat memasak.</li>
-    <li>Peserta OUTDOOR tidak diperkenankan memakai genset personal. Alat memasak menggunakan kompor gas, tidak diperbolehkan listrik.</li>
-    <li>Vendor DILARANG menjual ANEKA MINUMAN (air mineral, teh, minuman kaleng, minuman botol, soda). Jika diketahui menjual produk-produk yang disebutkan maka panitia akan mengambil langkah tegas dan kemungkinan vendor dapat di-blacklist untuk kedepannya.</li>
-    <li>Food certificate harap dibawa pada hari H. Untuk yang meminjam, tolong di-print dan dibawa pada hari H.</li>
-    <li>Pada hari H ketika upacara berlangsung pukul 09.00, aktivitas berjualan harap dihentikan untuk menjaga kekhusyukan upacara. Diminta ada perwakilan dari masing-masing vendor outdoor untuk mengikuti upacara di dalam.</li>
+    <li>Peserta INDOOR 
+Yang Disediakan Panitia:
+<ul class="indnt">
+<li>1 meja trestle</li>
+<li>Taplak plastik</li>
+<li>Label nama stall</li>
+<li>2 kursi</li>
+<li>1 outlet listrik untuk 1 alat masak listrik (max 1100 watt).</li>
+<li>Jadwal tagging (akan diinfokan menjelang acara)</li></ul>
+</li>
+    <li>Peserta OUTDOOR
+Yang Disediakan Panitia:
+<ul class="indnt"><li>1 meja trestle (opsional, konfirmasi jika tidak perlu)</li>
+<li>Taplak meja plastik</li>
+<li>Label nama stall</li></ul>
+
+Dibawa sendiri: 
+Tenda 3m x 3m</li>
+    <li>Peserta OUTDOOR yang menggunakan alat memasak WAJIB menggunakan Floor covering (tarpaulin/terpal/floormat) untuk menutupi alas rumput. Jika tidak menggunakan terpal, Panitia berhak melarang peserta untuk menggunakan alat memasak.</li>
+    <li>Peserta OUTDOOR tidak diperkenankan memakai genset personal. Alat memasak HANYA menggunakan gas, tidak diperbolehkan listrik atau arang.</li>
+    <li>Peserta DILARANG menjual ANEKA MINUMAN (air mineral, teh, minuman kaleng, minuman botol, soda). Jika diketahui menjual produk-produk yang disebutkan maka panitia akan mengambil langkah tegas dan kemungkinan vendor dapat di-blacklist untuk kedepannya.</li>
+    <li>Food safety certificate harap dibawa pada hari H. Untuk yang meminjam, tolong di-print dan dibawa pada hari H.</li>
+    <li>Pada hari H ketika upacara berlangsung pukul 09.00, aktivitas berjualan harap dihentikan untuk menjaga kekhusyukan upacara. Diminta ada perwakilan dari masing-masing peserta outdoor untuk mengikuti upacara di dalam.</li>
     <li>Kursi dan meja indoor tidak boleh dibawa keluar.</li>
     <li>Penunggu stall diharapkan berpakaian rapi dan sopan.</li>
-    <li>Vendor menyiapkan sendiri peralatan yang akan dibawa, alat masak, alat-alat penyajian, plastik sampah, dll. Diharapkan alat-alat yang digunakan sesuai standar yang berlaku.</li>
-    <li>Semua produk yang dijual menjadi tanggung jawab vendor sepenuhnya. Vendor wajib menjaga kebersihan makanan yang dijual dan juga stall masing-masing.</li>
+    <li>Peserta menyiapkan sendiri peralatan yang akan dibawa, alat masak, alat-alat penyajian, plastik sampah, dll. Diharapkan alat-alat yang digunakan sesuai standar yang berlaku.</li>
+    <li>Semua produk yang dijual menjadi tanggung jawab vendor sepenuhnya. Peserta wajib menjaga kebersihan makanan yang dijual dan juga stall masing-masing.</li>
   </ol>
 </div>
 
-<p class="cright">&copy; KKIA 17an</p>
+<div class="footer-social">
+  <a href="https://www.instagram.com/17ankkia/" target="_blank" rel="noopener noreferrer">
+    
+    Follow <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+      <circle cx="12" cy="12" r="4"/>
+      <circle cx="17.5" cy="6.5" r="0.6" fill="currentColor" stroke="none"/>
+    </svg> 17anKKIA
+  </a>
+</div>
 
 <footer>
-  <p>&copy; 2025 <strong>KKIA 17an</strong>. All rights reserved.</p>
+  <p>&copy; 2026 <strong>KKIA 17an</strong>. All rights reserved.</p>
 </footer>
 
 <script>
@@ -550,7 +646,7 @@ const BOOTHS = {
     { id: 18, price: 250,             x: 568, y: 434, w: 40, h: 33 },
   ],
   outdoor: [
-    { id: 19, price: 250, type: 'ft', shape: 'circle', cx: 237, cy: 290, r: 31 },
+    { id: 19, price: 250, type: 'ft', x: 237, y: 290, w: 38, h: 33 },
     { id: 20, price: 250, type: 'ft', x: 405, y:  72, w: 38, h: 33 },
     { id: 21, price: 220,             x: 494, y: 152, w: 37, h: 30 },
     { id: 22, price: 220,             x: 541, y: 152, w: 37, h: 30 },
