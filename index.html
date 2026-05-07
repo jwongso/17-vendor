@@ -427,7 +427,7 @@
       <div class="success-view">
         <div class="success-icon">✅</div>
         <h3>Pemesanan Berhasil!</h3>
-        <p>Permintaan pemesanan Anda telah terkirim.<br>Anda akan menerima email konfirmasi jika pemesanan berhasil diproses.<br>Jika tidak ada email dalam 5 menit, silakan coba lagi.</p>
+        <p>Konfirmasi telah dikirim ke email Anda.<br>Panitia akan menghubungi Anda untuk informasi pembayaran dalam 1x24 jam.</p>
         <button class="btn-confirm" onclick="closeModal()">Tutup</button>
       </div>
     </div>
@@ -715,17 +715,34 @@ async function submitBooking() {
       total:    '$' + computeTotal()
     });
 
-    // no-cors: POST goes through but response is unreadable.
-    // We show optimistic success; LockService on the server prevents
-    // double-booking. Vendor receives email only if booking truly succeeded.
-    await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body });
+    // POST via Netlify proxy (server-to-server, no CORS, response is readable)
+    const res  = await fetch('/.netlify/functions/booking', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body
+    });
+    const data = await res.json();
 
-    ids.forEach(id => markTaken(id));
-    selected.clear();
-    redrawSVGs();
-    updateBar();
-    document.getElementById('form-view').style.display   = 'none';
-    document.getElementById('success-view').style.display = '';
+    if (data.success) {
+      ids.forEach(id => markTaken(id));
+      selected.clear();
+      redrawSVGs();
+      updateBar();
+      document.getElementById('form-view').style.display   = 'none';
+      document.getElementById('success-view').style.display = '';
+
+    } else if (data.conflict && data.conflict.length) {
+      const nums = data.conflict.join(', ');
+      showError(`Stand #${nums} baru saja dipesan orang lain. Silakan pilih stand lain dan coba lagi.`);
+      data.conflict.forEach(id => markTaken(parseInt(id)));
+      redrawSVGs();
+      updateBar();
+      if (selected.size === 0) closeModal();
+      else populateModalSummary();
+
+    } else {
+      showError('Terjadi kesalahan pada server. Silakan coba beberapa saat lagi.');
+    }
 
   } catch (err) {
     showError('Tidak dapat terhubung ke server. Periksa koneksi internet Anda dan coba lagi.');
