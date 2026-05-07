@@ -826,10 +826,9 @@ async function submitBooking() {
     if (data.success) {
       ids.forEach(id => markTaken(id));
       selected.clear();
-      redrawSVGs();
-      updateBar();
       document.getElementById('form-view').style.display    = 'none';
       document.getElementById('success-view').style.display = '';
+      loadBooked(); // refresh booked data + tooltips
 
     } else if (data.conflict && data.conflict.length) {
       const nums = data.conflict.join(', ');
