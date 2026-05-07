@@ -43,7 +43,12 @@ function getBooked() {
       const n = parseInt(s.trim());
       if (!isNaN(n)) {
         booked.push(n);
-        info[n] = { name: rows[i][1], stallname: rows[i][4] }; // col B, E
+        if (info[n]) {
+          // Duplicate active booking — append name to flag conflict
+          info[n].name += ' ⚠️ ' + rows[i][1];
+        } else {
+          info[n] = { name: rows[i][1], stallname: rows[i][4] }; // col B, E
+        }
       }
     });
   }
