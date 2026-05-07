@@ -9,8 +9,9 @@ export async function onRequest() {
       headers: { 'Cache-Control': 'no-store' }
     });
   } catch (err) {
-    return Response.json({ booked: [] }, {
-      headers: { 'Cache-Control': 'no-store' }
-    });
+    return Response.json(
+      { error: 'Gagal memuat data pemesanan.' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } }
+    );
   }
 }
