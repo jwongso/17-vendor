@@ -175,10 +175,11 @@ function handleBooking(params) {
     }
 
     // No conflict: write the booking row
-    // Set columns B–H to plain text BEFORE writing to prevent Sheets auto-conversion
+    // Set column A to date+time, columns B–H to plain text BEFORE writing
     const timestamp = new Date();
     const lastRow = sheet.getLastRow() + 1;
-    sheet.getRange(lastRow, 2, 1, 7).setNumberFormat('@'); // columns B–H
+    sheet.getRange(lastRow, 1).setNumberFormat('dd/MM/yyyy HH:mm:ss'); // column A: full date+time
+    sheet.getRange(lastRow, 2, 1, 7).setNumberFormat('@');             // columns B–H: plain text
     sheet.getRange(lastRow, 1, 1, 9).setValues([[
       timestamp,                  // A: Timestamp
       name,                       // B: Name
