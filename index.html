@@ -71,9 +71,16 @@
       color: #666;
       transition: background 0.15s, color 0.15s;
     }
+      .swipe-hint { display: block; }
     }
 
-    /* ── Legend ─────────────────────────────────────────────── */
+    .swipe-hint {
+      display: none;
+      text-align: center;
+      font-size: 0.75rem;
+      color: #999;
+      padding: 5px 0 2px;
+    }
     .legend {
       display: flex;
       flex-wrap: wrap;
@@ -269,8 +276,8 @@
       width: 100%;
       border: 1.5px solid #ddd;
       border-radius: 6px;
-      padding: 9px 11px;
-      font-size: 0.9rem;
+      padding: 10px 11px;
+      font-size: 1rem;
       font-family: inherit;
       outline: none;
       transition: border-color 0.2s;
@@ -283,22 +290,22 @@
     .form-actions { display: flex; gap: 10px; margin-top: 18px; }
     .btn-cancel {
       flex: 1;
-      padding: 10px;
+      padding: 12px 10px;
       border: 1.5px solid #ccc;
       background: #fff;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 0.88rem;
+      font-size: 0.95rem;
     }
     .btn-confirm {
       flex: 2;
-      padding: 10px;
+      padding: 12px 10px;
       background: var(--red);
       color: #fff;
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 0.88rem;
+      font-size: 0.95rem;
       font-weight: 700;
     }
     .btn-confirm:disabled { background: #bbb; cursor: not-allowed; }
@@ -471,6 +478,7 @@
       <svg id="svg-indoor" viewBox="0 0 1065 654" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
   </div>
+  <p class="swipe-hint">👆 Geser kiri/kanan untuk melihat semua stall</p>
 </div>
 
 <!-- ── Outdoor ──────────────────────────────────────────────── -->
@@ -481,6 +489,7 @@
       <svg id="svg-outdoor" viewBox="0 0 1065 653" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
   </div>
+  <p class="swipe-hint">👆 Geser kiri/kanan untuk melihat semua stall</p>
 </div>
 
 <div class="bar-spacer"></div>
