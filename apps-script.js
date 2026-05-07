@@ -125,7 +125,7 @@ function handleBooking(params) {
         htmlBody: `
           <div style="font-family:sans-serif; max-width:480px;">
             <h2 style="color:#CC0001; border-bottom:2px solid #CC0001; padding-bottom:8px;">
-              Pemesanan Stand Dikonfirmasi
+              Pemesanan Stall Diproses
             </h2>
             <p>Yth. <strong>${params.name}</strong>,</p>
             <p>Terima kasih! Berikut rincian pemesanan stand Anda:</p>
@@ -155,7 +155,7 @@ function handleBooking(params) {
                 <td style="padding:8px 12px;">${timestamp.toLocaleString('id-ID')}</td>
               </tr>
             </table>
-            <p>Panitia akan menghubungi Anda dalam <strong>1x24 jam</strong> untuk informasi pembayaran.</p>
+            <p>Panitia akan menghubungi Anda dalam <strong>1x24 jam</strong> untuk approval dan informasi pembayaran.</p>
             <p style="color:#888; font-size:12px; margin-top:20px;">
               Panitia HUT Kemerdekaan RI ke-81
             </p>
