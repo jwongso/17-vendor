@@ -121,17 +121,17 @@ function handleBooking(params) {
     try {
       MailApp.sendEmail({
         to:       params.email,
-        subject:  '✅ Konfirmasi Pemesanan Stand – HUT RI ke-81',
+        subject:  '✅ Konfirmasi Pemesanan Stall – HUT RI ke-81',
         htmlBody: `
           <div style="font-family:sans-serif; max-width:480px;">
             <h2 style="color:#CC0001; border-bottom:2px solid #CC0001; padding-bottom:8px;">
               Pemesanan Stall Diproses
             </h2>
             <p>Yth. <strong>${params.name}</strong>,</p>
-            <p>Terima kasih! Berikut rincian pemesanan stand Anda:</p>
+            <p>Terima kasih! Berikut rincian pemesanan stall Anda:</p>
             <table style="width:100%; border-collapse:collapse; margin:14px 0;">
               <tr style="background:#f9f9f9;">
-                <td style="padding:8px 12px; color:#666; width:40%;">Stand</td>
+                <td style="padding:8px 12px; color:#666; width:40%;">Stall</td>
                 <td style="padding:8px 12px;"><strong>#${params.booths}</strong></td>
               </tr>
               <tr>
@@ -170,10 +170,10 @@ function handleBooking(params) {
     try {
       MailApp.sendEmail({
         to:      COORDINATOR_EMAIL,
-        subject: `📦 Pemesanan Baru: Stand #${params.booths} – ${params.name}`,
+        subject: `📦 Pemesanan Baru: Stall #${params.booths} – ${params.name}`,
         htmlBody: `
           <div style="font-family:sans-serif; max-width:480px;">
-            <h2 style="color:#CC0001;">Pemesanan Stand Baru Masuk</h2>
+            <h2 style="color:#CC0001;">Pemesanan Stall Baru Masuk</h2>
             <table style="width:100%; border-collapse:collapse;">
               <tr style="background:#f9f9f9;">
                 <td style="padding:8px 12px; color:#666; width:35%;">Nama</td>
@@ -188,7 +188,7 @@ function handleBooking(params) {
                 <td style="padding:8px 12px;">${params.phone}</td>
               </tr>
               <tr>
-                <td style="padding:8px 12px; color:#666;">Stand</td>
+                <td style="padding:8px 12px; color:#666;">Stall</td>
                 <td style="padding:8px 12px;"><strong>#${params.booths}</strong></td>
               </tr>
               <tr style="background:#f9f9f9;">
@@ -210,7 +210,7 @@ function handleBooking(params) {
             </table>
             <hr style="margin:16px 0; border:none; border-top:1px solid #ddd;">
             <p style="font-size:12px; color:#888;">
-              Untuk membatalkan / mereset stand: buka Google Sheet → kolom I (Status) → ubah menjadi <strong>Cancelled</strong>.
+              Untuk membatalkan / mereset stall: buka Google Sheet → kolom I (Status) → ubah menjadi <strong>Cancelled</strong>.
             </p>
             <p style="font-size:12px; margin-top:8px;">
               🔗 <a href="${SpreadsheetApp.getActiveSpreadsheet().getUrl()}" style="color:#CC0001;">Buka Google Sheet</a>
