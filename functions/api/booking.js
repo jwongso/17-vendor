@@ -1,5 +1,5 @@
 // Cloudflare Pages Function: proxy booking submission to Apps Script via GET
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbylqYRFcBDhupU5t_s7PVWvnf1fUZkBh5gaUfeEuCdAM8jHZ7HNxdq-ssZ3ACfdqdxP7Q/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzu-bcY5_k9vXeL5d5JElPb14JB0hxmTGqDvoQkjb8oF7wZkzFokNA-9FSerRNqMM63xA/exec';
 
 export async function onRequest(context) {
   const { request } = context;
