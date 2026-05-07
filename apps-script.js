@@ -15,13 +15,19 @@ const COORDINATOR_EMAIL = 'YOUR_COORDINATOR_EMAIL_HERE'; // e.g. boss@gmail.com
 // ?action=book&name=...&email=...&phone=...&booths=...&location=...&total=...
 // Returns: { booked: [...] }  or  { success: true }  or  { success: false, conflict: [...] }
 function doGet(e) {
-  const p = e && e.parameter ? e.parameter : {};
+  try {
+    const p = e && e.parameter ? e.parameter : {};
 
-  if (p.action === 'book') {
-    return handleBooking(p);
+    if (p.action === 'book') {
+      return handleBooking(p);
+    }
+
+    return getBooked();
+  } catch (err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
   }
-
-  return getBooked();
 }
 
 function getBooked() {
@@ -50,7 +56,11 @@ function getBooked() {
 //       or { success: false, conflict: [5, 21] }
 function handleBooking(params) {
   const lock = LockService.getScriptLock();
-  lock.tryLock(15000);
+  if (!lock.tryLock(15000)) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ success: false, error: 'Server sedang sibuk, coba lagi.' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
@@ -90,91 +100,99 @@ function handleBooking(params) {
       'Active'        // H: Status  (change to 'Cancelled' to unblock)
     ]);
 
-    // Confirmation email to the vendor
-    MailApp.sendEmail({
-      to:       params.email,
-      subject:  '✅ Konfirmasi Pemesanan Stand – HUT RI ke-80',
-      htmlBody: `
-        <div style="font-family:sans-serif; max-width:480px;">
-          <h2 style="color:#CC0001; border-bottom:2px solid #CC0001; padding-bottom:8px;">
-            Pemesanan Stand Dikonfirmasi
-          </h2>
-          <p>Yth. <strong>${params.name}</strong>,</p>
-          <p>Terima kasih! Berikut rincian pemesanan stand Anda:</p>
-          <table style="width:100%; border-collapse:collapse; margin:14px 0;">
-            <tr style="background:#f9f9f9;">
-              <td style="padding:8px 12px; color:#666; width:40%;">Stand</td>
-              <td style="padding:8px 12px;"><strong>#${params.booths}</strong></td>
-            </tr>
-            <tr>
-              <td style="padding:8px 12px; color:#666;">Lokasi</td>
-              <td style="padding:8px 12px;">${params.location}</td>
-            </tr>
-            <tr style="background:#f9f9f9;">
-              <td style="padding:8px 12px; color:#666;">Total</td>
-              <td style="padding:8px 12px;"><strong style="color:#CC0001;">${params.total}</strong></td>
-            </tr>
-            <tr>
-              <td style="padding:8px 12px; color:#666;">No. HP</td>
-              <td style="padding:8px 12px;">${params.phone}</td>
-            </tr>
-            <tr style="background:#f9f9f9;">
-              <td style="padding:8px 12px; color:#666;">Waktu</td>
-              <td style="padding:8px 12px;">${timestamp.toLocaleString('id-ID')}</td>
-            </tr>
-          </table>
-          <p>Panitia akan menghubungi Anda dalam <strong>1x24 jam</strong> untuk informasi pembayaran.</p>
-          <p style="color:#888; font-size:12px; margin-top:20px;">
-            Panitia HUT Kemerdekaan RI ke-80
-          </p>
-        </div>
-      `
-    });
+    // Confirmation email to the vendor (non-fatal if it fails)
+    try {
+      MailApp.sendEmail({
+        to:       params.email,
+        subject:  '✅ Konfirmasi Pemesanan Stand – HUT RI ke-80',
+        htmlBody: `
+          <div style="font-family:sans-serif; max-width:480px;">
+            <h2 style="color:#CC0001; border-bottom:2px solid #CC0001; padding-bottom:8px;">
+              Pemesanan Stand Dikonfirmasi
+            </h2>
+            <p>Yth. <strong>${params.name}</strong>,</p>
+            <p>Terima kasih! Berikut rincian pemesanan stand Anda:</p>
+            <table style="width:100%; border-collapse:collapse; margin:14px 0;">
+              <tr style="background:#f9f9f9;">
+                <td style="padding:8px 12px; color:#666; width:40%;">Stand</td>
+                <td style="padding:8px 12px;"><strong>#${params.booths}</strong></td>
+              </tr>
+              <tr>
+                <td style="padding:8px 12px; color:#666;">Lokasi</td>
+                <td style="padding:8px 12px;">${params.location}</td>
+              </tr>
+              <tr style="background:#f9f9f9;">
+                <td style="padding:8px 12px; color:#666;">Total</td>
+                <td style="padding:8px 12px;"><strong style="color:#CC0001;">${params.total}</strong></td>
+              </tr>
+              <tr>
+                <td style="padding:8px 12px; color:#666;">No. HP</td>
+                <td style="padding:8px 12px;">${params.phone}</td>
+              </tr>
+              <tr style="background:#f9f9f9;">
+                <td style="padding:8px 12px; color:#666;">Waktu</td>
+                <td style="padding:8px 12px;">${timestamp.toLocaleString('id-ID')}</td>
+              </tr>
+            </table>
+            <p>Panitia akan menghubungi Anda dalam <strong>1x24 jam</strong> untuk informasi pembayaran.</p>
+            <p style="color:#888; font-size:12px; margin-top:20px;">
+              Panitia HUT Kemerdekaan RI ke-80
+            </p>
+          </div>
+        `
+      });
+    } catch (mailErr) {
+      console.error('Vendor email failed:', mailErr.message);
+    }
 
-    // Notification email to the coordinator
-    MailApp.sendEmail({
-      to:      COORDINATOR_EMAIL,
-      subject: `📦 Pemesanan Baru: Stand #${params.booths} – ${params.name}`,
-      htmlBody: `
-        <div style="font-family:sans-serif; max-width:480px;">
-          <h2 style="color:#CC0001;">Pemesanan Stand Baru Masuk</h2>
-          <table style="width:100%; border-collapse:collapse;">
-            <tr style="background:#f9f9f9;">
-              <td style="padding:8px 12px; color:#666; width:35%;">Nama</td>
-              <td style="padding:8px 12px;"><strong>${params.name}</strong></td>
-            </tr>
-            <tr>
-              <td style="padding:8px 12px; color:#666;">Email</td>
-              <td style="padding:8px 12px;">${params.email}</td>
-            </tr>
-            <tr style="background:#f9f9f9;">
-              <td style="padding:8px 12px; color:#666;">No. HP</td>
-              <td style="padding:8px 12px;">${params.phone}</td>
-            </tr>
-            <tr>
-              <td style="padding:8px 12px; color:#666;">Stand</td>
-              <td style="padding:8px 12px;"><strong>#${params.booths}</strong></td>
-            </tr>
-            <tr style="background:#f9f9f9;">
-              <td style="padding:8px 12px; color:#666;">Lokasi</td>
-              <td style="padding:8px 12px;">${params.location}</td>
-            </tr>
-            <tr>
-              <td style="padding:8px 12px; color:#666;">Total</td>
-              <td style="padding:8px 12px;"><strong style="color:#CC0001;">${params.total}</strong></td>
-            </tr>
-            <tr style="background:#f9f9f9;">
-              <td style="padding:8px 12px; color:#666;">Waktu</td>
-              <td style="padding:8px 12px;">${timestamp.toLocaleString('id-ID')}</td>
-            </tr>
-          </table>
-          <hr style="margin:16px 0; border:none; border-top:1px solid #ddd;">
-          <p style="font-size:12px; color:#888;">
-            Untuk membatalkan / mereset stand: buka Google Sheet → kolom H (Status) → ubah menjadi <strong>Cancelled</strong>.
-          </p>
-        </div>
-      `
-    });
+    // Notification email to the coordinator (non-fatal if it fails)
+    try {
+      MailApp.sendEmail({
+        to:      COORDINATOR_EMAIL,
+        subject: `📦 Pemesanan Baru: Stand #${params.booths} – ${params.name}`,
+        htmlBody: `
+          <div style="font-family:sans-serif; max-width:480px;">
+            <h2 style="color:#CC0001;">Pemesanan Stand Baru Masuk</h2>
+            <table style="width:100%; border-collapse:collapse;">
+              <tr style="background:#f9f9f9;">
+                <td style="padding:8px 12px; color:#666; width:35%;">Nama</td>
+                <td style="padding:8px 12px;"><strong>${params.name}</strong></td>
+              </tr>
+              <tr>
+                <td style="padding:8px 12px; color:#666;">Email</td>
+                <td style="padding:8px 12px;">${params.email}</td>
+              </tr>
+              <tr style="background:#f9f9f9;">
+                <td style="padding:8px 12px; color:#666;">No. HP</td>
+                <td style="padding:8px 12px;">${params.phone}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 12px; color:#666;">Stand</td>
+                <td style="padding:8px 12px;"><strong>#${params.booths}</strong></td>
+              </tr>
+              <tr style="background:#f9f9f9;">
+                <td style="padding:8px 12px; color:#666;">Lokasi</td>
+                <td style="padding:8px 12px;">${params.location}</td>
+              </tr>
+              <tr>
+                <td style="padding:8px 12px; color:#666;">Total</td>
+                <td style="padding:8px 12px;"><strong style="color:#CC0001;">${params.total}</strong></td>
+              </tr>
+              <tr style="background:#f9f9f9;">
+                <td style="padding:8px 12px; color:#666;">Waktu</td>
+                <td style="padding:8px 12px;">${timestamp.toLocaleString('id-ID')}</td>
+              </tr>
+            </table>
+            <hr style="margin:16px 0; border:none; border-top:1px solid #ddd;">
+            <p style="font-size:12px; color:#888;">
+              Untuk membatalkan / mereset stand: buka Google Sheet → kolom H (Status) → ubah menjadi <strong>Cancelled</strong>.
+            </p>
+          </div>
+        `
+      });
+    } catch (mailErr) {
+      console.error('Coordinator email failed:', mailErr.message);
+    }
 
     return ContentService
       .createTextOutput(JSON.stringify({ success: true }))

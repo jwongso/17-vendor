@@ -722,6 +722,7 @@ async function submitBooking() {
       body
     });
     const data = await res.json();
+    console.log('Booking response (HTTP', res.status, '):', JSON.stringify(data));
 
     if (data.success) {
       ids.forEach(id => markTaken(id));
@@ -741,7 +742,8 @@ async function submitBooking() {
       else populateModalSummary();
 
     } else {
-      showError('Terjadi kesalahan pada server. Silakan coba beberapa saat lagi.');
+      showError('Terjadi kesalahan pada server. Silakan coba beberapa saat lagi.' +
+        (data.error ? ' (' + data.error + ')' : ''));
     }
 
   } catch (err) {
