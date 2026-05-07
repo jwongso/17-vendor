@@ -1,5 +1,6 @@
 [build]
-  publish = "."
+  command   = "sed -i \"s/__HASH__/${COMMIT_REF:0:7}/\" index.html"
+  publish   = "."
   functions = "netlify/functions"
 
 [functions]
