@@ -1,5 +1,5 @@
 // Cloudflare Pages Function: proxy GET booked list from Apps Script
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxv0JGRgrgjQLLBwdpP0KNW_M_JCSBhX_IfRj1G6eXw2iMExrNsC-wHb5QttN-0rRpfxA/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyozsW9ZCU214KtzkvC4oMPxTRb1RdkxMGJAmCfSsIIgD1una8y9BRu1f9GkOu4eSL8KA/exec';
 
 export async function onRequest() {
   try {
