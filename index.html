@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pemesanan Stand – HUT RI ke-81</title>
+  <title>Pemesanan Stall – HUT RI ke-81</title>
 
   <!-- Open Graph / WhatsApp preview -->
   <meta property="og:type"        content="website">
   <meta property="og:url"         content="https://bookingbooth.pages.dev/">
-  <meta property="og:title"       content="Pemesanan Stand – HUT RI ke-81 | 17anKKIA">
-  <meta property="og:description" content="Pesan stand pameran Anda untuk perayaan HUT Kemerdekaan RI ke-81. Cek ketersediaan dan daftarkan stall Anda sekarang!">
+  <meta property="og:title"       content="Pemesanan Stall – HUT RI ke-81 | 17anKKIA">
+  <meta property="og:description" content="Pesan Stall pameran Anda untuk perayaan HUT Kemerdekaan RI ke-81. Cek ketersediaan dan daftarkan stall Anda sekarang!">
   <meta property="og:image"       content="https://bookingbooth.pages.dev/meta.jpeg">
   <meta property="og:locale"      content="id_ID">
   <!-- WhatsApp / Twitter fallback -->
   <meta name="twitter:card"        content="summary_large_image">
-  <meta name="twitter:title"       content="Pemesanan Stand – HUT RI ke-81 | 17anKKIA">
-  <meta name="twitter:description" content="Pesan stand pameran Anda untuk perayaan HUT Kemerdekaan RI ke-81.">
+  <meta name="twitter:title"       content="Pemesanan Stall – HUT RI ke-81 | 17anKKIA">
+  <meta name="twitter:description" content="Pesan Stall pameran Anda untuk perayaan HUT Kemerdekaan RI ke-81.">
   <meta name="twitter:image"       content="https://bookingbooth.pages.dev/meta.jpeg">
   <style>
     :root {
@@ -71,16 +71,9 @@
       color: #666;
       transition: background 0.15s, color 0.15s;
     }
-      .swipe-hint { display: block; }
     }
 
-    .swipe-hint {
-      display: none;
-      text-align: center;
-      font-size: 0.75rem;
-      color: #999;
-      padding: 5px 0 2px;
-    }
+    /* ── Legend ─────────────────────────────────────────────── */
     .legend {
       display: flex;
       flex-wrap: wrap;
@@ -276,8 +269,8 @@
       width: 100%;
       border: 1.5px solid #ddd;
       border-radius: 6px;
-      padding: 10px 11px;
-      font-size: 1rem;
+      padding: 9px 11px;
+      font-size: 0.9rem;
       font-family: inherit;
       outline: none;
       transition: border-color 0.2s;
@@ -290,22 +283,22 @@
     .form-actions { display: flex; gap: 10px; margin-top: 18px; }
     .btn-cancel {
       flex: 1;
-      padding: 12px 10px;
+      padding: 10px;
       border: 1.5px solid #ccc;
       background: #fff;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 0.95rem;
+      font-size: 0.88rem;
     }
     .btn-confirm {
       flex: 2;
-      padding: 12px 10px;
+      padding: 10px;
       background: var(--red);
       color: #fff;
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 0.95rem;
+      font-size: 0.88rem;
       font-weight: 700;
     }
     .btn-confirm:disabled { background: #bbb; cursor: not-allowed; }
@@ -444,7 +437,7 @@
   <div>
     <div id="logo"><img src="logo81.png" alt="HUT RI ke-81"></div>
     <div class="header-text">
-      <h1>Pemesanan Stand Makanan</h1>
+      <h1>Pemesanan Stall Makanan KKIA</h1>
       <p>Peringatan HUT Kemerdekaan Republik Indonesia ke-81</p>
     </div>
   </div>
@@ -478,7 +471,6 @@
       <svg id="svg-indoor" viewBox="0 0 1065 654" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
   </div>
-  <p class="swipe-hint">👆 Geser kiri/kanan untuk melihat semua stall</p>
 </div>
 
 <!-- ── Outdoor ──────────────────────────────────────────────── -->
@@ -489,7 +481,6 @@
       <svg id="svg-outdoor" viewBox="0 0 1065 653" xmlns="http://www.w3.org/2000/svg"></svg>
     </div>
   </div>
-  <p class="swipe-hint">👆 Geser kiri/kanan untuk melihat semua stall</p>
 </div>
 
 <div class="bar-spacer"></div>
@@ -524,7 +515,7 @@
       </div>
 
       <div class="booking-summary">
-        <div class="section-label">Stand yang dipilih:</div>
+        <div class="section-label">Stall yang dipilih:</div>
         <div class="booth-tags" id="modal-tags"></div>
         <div class="total-line">Total: <span class="total-amount" id="modal-total"></span></div>
       </div>
@@ -532,7 +523,7 @@
       <div class="error-msg" id="error-msg"></div>
 
       <div class="form-group">
-        <label>Nomor Stand</label>
+        <label>Nomor Stall</label>
         <input type="text" id="f-stall" readonly style="background:#f5f5f5;color:#333;cursor:default;">
       </div>
       <div class="form-group">
