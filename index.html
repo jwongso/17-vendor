@@ -498,10 +498,10 @@
 <!-- ── Sticky bar ───────────────────────────────────────────── -->
 <div class="summary-bar">
   <div class="summary-text">
-    <div class="label" id="sel-label">Belum ada stand dipilih</div>
+    <div class="label" id="sel-label">Belum ada stall dipilih</div>
     <div class="price" id="sel-price" style="display:none;"></div>
   </div>
-  <button class="book-btn" id="book-btn" disabled onclick="openModal()">Pesan Stand</button>
+  <button class="book-btn" id="book-btn" disabled onclick="openModal()">Pesan Stall</button>
 </div>
 
 <!-- ── Modal ────────────────────────────────────────────────── -->
@@ -518,7 +518,7 @@
           <li>Pemilihan stall akan melalui proses approval dari panitia. Panitia berhak menolak dan merubah posisi stall sesuai kepentingan dan kelancaran event.</li>
           <li>Proses approval akan dihubungi lewat WA.</li>
           <li>Pembayaran wajib dilakukan dalam waktu 48 jam setelah approval.</li>
-          <li>Stand tidak dapat dipindahtangankan kepada pihak lain.</li>
+          <li>Stall tidak dapat dipindahtangankan kepada pihak lain.</li>
           <li>Panitia berhak membatalkan pemesanan jika pembayaran tidak dilakukan tepat waktu.</li>
           <li>Keputusan panitia bersifat final dan tidak dapat diganggu gugat.</li>
         </ul>
@@ -825,12 +825,12 @@ function updateBar() {
   const btnEl   = document.getElementById('book-btn');
 
   if (selected.size === 0) {
-    labelEl.textContent   = 'Belum ada stand dipilih';
+    labelEl.textContent   = 'Belum ada stall dipilih';
     priceEl.style.display = 'none';
     btnEl.disabled = true;
   } else {
     const sorted = [...selected].sort((a, b) => a - b);
-    labelEl.textContent = 'Stand: ' + sorted.map(id =>
+    labelEl.textContent = 'Stall: ' + sorted.map(id =>
       `#${id} (${isIndoor(id) ? 'In' : 'Out'})`
     ).join(', ');
     priceEl.textContent   = 'Total: $' + computeTotal().toLocaleString() + discountLabel();
@@ -862,7 +862,7 @@ function populateModalSummary() {
   document.getElementById('modal-total').textContent = '$' + computeTotal().toLocaleString() + discountLabel();
   const sorted = [...selected].sort((a, b) => a - b);
   document.getElementById('f-stall').value = sorted.map(id =>
-    `Stand #${id} (${isIndoor(id) ? 'Indoor' : 'Outdoor'})`
+    `Stall #${id} (${isIndoor(id) ? 'Indoor' : 'Outdoor'})`
   ).join(', ');
 }
 
@@ -956,7 +956,7 @@ async function submitBooking() {
 
     } else if (data.conflict && data.conflict.length) {
       const nums = data.conflict.join(', ');
-      showError(`Stand #${nums} baru saja dipesan orang lain. Silakan pilih stand lain dan coba lagi.`);
+      showError(`Stall #${nums} baru saja dipesan orang lain. Silakan pilih stall lain dan coba lagi.`);
       data.conflict.forEach(id => markTaken(parseInt(id)));
       redrawSVGs();
       updateBar();
