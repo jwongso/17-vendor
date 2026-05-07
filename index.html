@@ -920,8 +920,8 @@ async function submitBooking() {
   let valid = true;
   if (!name)                          { nameEl.classList.add('field-error');      valid = false; }
   if (!stallname)                     { stallnameEl.classList.add('field-error'); valid = false; }
-  if (!email || !email.includes('@')) { emailEl.classList.add('field-error');     valid = false; }
-  if (!phone)                         { phoneEl.classList.add('field-error');     valid = false; }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { emailEl.classList.add('field-error'); valid = false; }
+  if (!phone || !/^[\d\s\+\-\(\)]{5,20}$/.test(phone))    { phoneEl.classList.add('field-error'); valid = false; }
 
   if (!valid) { showError('Harap isi semua kolom dengan benar.'); return; }
 
@@ -977,7 +977,7 @@ async function submitBooking() {
   }
 }
 
-// ── Load currently booked booths via Netlify proxy ────────────
+// ── Load currently booked booths via Cloudflare proxy ───────────
 async function loadBooked() {
   try {
     const res  = await fetch('/api/booked');
