@@ -81,6 +81,16 @@
       .swipe-hint { display: block; }
     }
 
+    /* ── Booked warning banner ──────────────────────────────── */
+    .booked-warning {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      color: #856404;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      text-align: center;
+    }
+
     /* ── Legend ─────────────────────────────────────────────── */
     .legend {
       display: flex;
@@ -451,6 +461,11 @@
   </div>
 </header>
 
+<!-- ── Booked-status warning ─────────────────────────────── -->
+<div id="booked-warning" class="booked-warning" style="display:none;">
+  ⚠️ Status pemesanan gagal dimuat. Booth yang sudah dipesan mungkin tidak ditampilkan dengan benar.
+</div>
+
 <!-- ── Legend ───────────────────────────────────────────────── -->
 <div class="legend">
   <div class="legend-item"><div class="legend-dot" style="background:#f5c400;"></div><span>$200</span></div>
@@ -768,9 +783,8 @@ function buildSVG(tab) {
       g.appendChild(title);
     } else if (taken.has(booth.id) && bookedNames[booth.id]) {
       const info  = bookedNames[booth.id];
-      const label = info.stallname ? `${info.stallname} (${info.name})` : info.name;
       const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-      title.textContent = label;
+      title.textContent = info.stallname || 'Sudah dipesan';
       g.appendChild(title);
     }
 
@@ -979,9 +993,14 @@ async function submitBooking() {
 
 // ── Load currently booked booths via Cloudflare proxy ───────────
 async function loadBooked() {
+  const warning = document.getElementById('booked-warning');
   try {
     const res  = await fetch('/api/booked');
     const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    // Clear stale state before repopulating (handles cancellations)
+    taken.clear();
+    Object.keys(bookedNames).forEach(k => delete bookedNames[k]);
     if (Array.isArray(data.booked)) {
       data.booked.forEach(id => taken.add(parseInt(id)));
     }
@@ -990,8 +1009,10 @@ async function loadBooked() {
         bookedNames[parseInt(id)] = info;
       });
     }
+    if (warning) warning.style.display = 'none';
   } catch (e) {
     console.warn('Could not load booked status:', e);
+    if (warning) warning.style.display = '';
   }
   redrawSVGs();
   updateBar();
