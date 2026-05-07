@@ -11,11 +11,20 @@
 const SHEET_NAME        = 'Bookings';
 const COORDINATOR_EMAIL = 'YOUR_COORDINATOR_EMAIL_HERE'; // e.g. boss@gmail.com
 
-// ── GET: return list of currently booked booth IDs ────────────
-// Supports both plain JSON and JSONP (pass ?callback=fnName).
-// JSONP bypasses browser CORS restrictions for cross-origin reads.
-// Returns: { booked: [3, 5, 21, ...] }
+// ── GET: list booked booths OR process a booking ──────────────
+// ?action=book&name=...&email=...&phone=...&booths=...&location=...&total=...
+// Returns: { booked: [...] }  or  { success: true }  or  { success: false, conflict: [...] }
 function doGet(e) {
+  const p = e && e.parameter ? e.parameter : {};
+
+  if (p.action === 'book') {
+    return handleBooking(p);
+  }
+
+  return getBooked();
+}
+
+function getBooked() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
   const rows  = sheet.getDataRange().getValues();
 
@@ -23,39 +32,29 @@ function doGet(e) {
   for (let i = 1; i < rows.length; i++) {
     const status = rows[i][7]; // column H
     if (status === 'Cancelled') continue;
-    String(rows[i][4]).split(',').forEach(s => { // column E: booth list
+    String(rows[i][4]).split(',').forEach(s => {
       const n = parseInt(s.trim());
       if (!isNaN(n)) booked.push(n);
     });
   }
 
-  const json     = JSON.stringify({ booked });
-  const callback = e && e.parameter && e.parameter.callback;
-
-  if (callback) {
-    // JSONP: wrap in callback function — no CORS header needed
-    return ContentService
-      .createTextOutput(callback + '(' + json + ')')
-      .setMimeType(ContentService.MimeType.JAVASCRIPT);
-  }
-
   return ContentService
-    .createTextOutput(json)
+    .createTextOutput(JSON.stringify({ booked }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-// ── POST: validate, record booking, send emails ───────────────
+// ── handleBooking: validate, record booking, send emails ──────
+// Called by doGet (action=book) — GET works reliably server-to-server.
 // Uses LockService to prevent double-booking race conditions.
 // Returns: { success: true }
 //       or { success: false, conflict: [5, 21] }
-function doPost(e) {
+function handleBooking(params) {
   const lock = LockService.getScriptLock();
-  lock.tryLock(15000); // wait up to 15s for other requests to finish
+  lock.tryLock(15000);
 
   try {
-    const sheet  = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-    const rows   = sheet.getDataRange().getValues();
-    const params = e.parameter;
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+    const rows  = sheet.getDataRange().getValues();
 
     const requested = String(params.booths)
       .split(',')
