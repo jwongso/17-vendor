@@ -11,6 +11,18 @@
 const SHEET_NAME        = 'Bookings';
 const COORDINATOR_EMAIL = 'YOUR_COORDINATOR_EMAIL_HERE'; // e.g. boss@gmail.com
 
+// ── Booth price map (mirrors index.html BOOTHS array) ─────────
+const BOOTH_PRICES = {
+   1:200,  2:200,  3:220,  4:220,  5:250,  6:250,  7:250,  8:250,
+   9:220, 10:220, 11:200, 12:200, 13:220, 14:250, 15:220, 16:250,
+  17:250, 18:250,
+  19:250, 20:250, 21:220, 22:220, 23:220, 24:220, 25:220, 26:220,
+  27:220, 28:220, 29:220, 30:220, 31:220, 32:220, 33:200, 34:200,
+  35:250, 36:250, 37:250, 38:250, 39:200, 40:200, 41:220, 42:220,
+  43:200, 44:220, 45:220, 46:220, 47:220
+};
+const INDOOR_IDS = new Set([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]);
+
 // ── Auto-format column F as Plain Text on sheet open ──────────
 // Prevents Google Sheets from converting booth numbers (e.g. "12, 16, 29") into dates.
 function onOpen() {
@@ -39,7 +51,7 @@ function doGet(e) {
 
 function getBooked() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-  const rows  = sheet.getDataRange().getValues();
+  const rows  = sheet.getDataRange().getDisplayValues(); // avoids Date auto-conversion
 
   const booked = [];
   const info   = {};
@@ -50,11 +62,8 @@ function getBooked() {
       const n = parseInt(s.trim());
       if (!isNaN(n)) {
         booked.push(n);
-        if (info[n]) {
-          // Duplicate active booking — append name to flag conflict
-          info[n].name += ' ⚠️ ' + rows[i][1];
-        } else {
-          info[n] = { name: rows[i][1], stallname: rows[i][4] }; // col B, E
+        if (!info[n]) {
+          info[n] = { stallname: rows[i][4] }; // col E only — no vendor name (PII)
         }
       }
     });
@@ -62,6 +71,42 @@ function getBooked() {
 
   return ContentService
     .createTextOutput(JSON.stringify({ booked, info }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ── Security helpers ──────────────────────────────────────────
+
+// Escape HTML special chars before interpolating user data into email htmlBody
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Reject strings that start with spreadsheet formula characters (injection guard)
+function isSafe(s) {
+  return !/^[=+\-@]/.test(String(s));
+}
+
+// Compute server-side total from validated booth IDs (ignores client-supplied value)
+function serverTotal(ids) {
+  const base = ids.reduce((sum, id) => sum + (BOOTH_PRICES[id] || 0), 0);
+  const discount = ids.length >= 3 ? 0.10 : ids.length === 2 ? 0.05 : 0;
+  return Math.round(base * (1 - discount));
+}
+
+// Derive location label from booth IDs (all indoor → 'Indoor', else 'Outdoor')
+function serverLocation(ids) {
+  return ids.every(id => INDOOR_IDS.has(id)) ? 'Indoor' : 'Outdoor';
+}
+
+// Convenience: return a JSON error response
+function errResponse(msg) {
+  return ContentService
+    .createTextOutput(JSON.stringify({ success: false, error: msg }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -77,23 +122,19 @@ function handleBooking(params) {
   const email     = String(params.email     || '').trim();
   const phone     = String(params.phone     || '').trim();
   const booths    = String(params.booths    || '').trim();
-  const location  = String(params.location  || '').trim();
-  const total     = String(params.total     || '').trim();
+  // location and total are NOT accepted from client — computed server-side below
 
-  if (!name || !stallname || !email || !phone || !booths || !location || !total) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: false, error: 'Semua field wajib diisi.' }))
-      .setMimeType(ContentService.MimeType.JSON);
+  if (!name || !stallname || !email || !phone || !booths) {
+    return errResponse('Semua field wajib diisi.');
+  }
+  if (!isSafe(name) || !isSafe(stallname)) {
+    return errResponse('Input mengandung karakter yang tidak diizinkan.');
   }
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: false, error: 'Format email tidak valid.' }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return errResponse('Format email tidak valid.');
   }
   if (!/^[\d\s\+\-\(\)]{5,20}$/.test(phone)) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: false, error: 'Format nomor HP tidak valid.' }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return errResponse('Format nomor HP tidak valid.');
   }
 
   const requested = booths.split(',')
@@ -101,16 +142,16 @@ function handleBooking(params) {
     .filter(n => !isNaN(n) && n >= 1 && n <= 47);
 
   if (requested.length === 0) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: false, error: 'Nomor stall tidak valid.' }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return errResponse('Nomor stall tidak valid.');
   }
+
+  // ── Compute location & total server-side (client values ignored) ──
+  const location = serverLocation(requested);
+  const total    = '$' + serverTotal(requested);
 
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(15000)) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ success: false, error: 'Server sedang sibuk, coba lagi.' }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return errResponse('Server sedang sibuk, coba lagi.');
   }
 
   try {
@@ -134,54 +175,54 @@ function handleBooking(params) {
     }
 
     // No conflict: write the booking row
-    // Set column F to plain text BEFORE writing to prevent Sheets date auto-conversion
+    // Set columns B–H to plain text BEFORE writing to prevent Sheets auto-conversion
     const timestamp = new Date();
     const lastRow = sheet.getLastRow() + 1;
-    sheet.getRange(lastRow, 6).setNumberFormat('@');
+    sheet.getRange(lastRow, 2, 1, 7).setNumberFormat('@'); // columns B–H
     sheet.getRange(lastRow, 1, 1, 9).setValues([[
-      timestamp,   // A: Timestamp
-      name,        // B: Name
-      email,       // C: Email
-      phone,       // D: Phone
-      stallname,   // E: Stall Name
-      booths,      // F: Booths  (plain text — no date conversion)
-      location,    // G: Location
-      total,       // H: Total
-      'Active'     // I: Status  (change to 'Cancelled' to unblock)
+      timestamp,                  // A: Timestamp
+      name,                       // B: Name
+      email,                      // C: Email
+      phone,                      // D: Phone
+      stallname,                  // E: Stall Name
+      requested.join(', '),       // F: Booths (server-normalised, plain text)
+      location,                   // G: Location (server-computed)
+      total,                      // H: Total   (server-computed)
+      'Active'                    // I: Status  (change to 'Cancelled' to unblock)
     ]]);
 
     // Confirmation email to the vendor (non-fatal if it fails)
     try {
       MailApp.sendEmail({
-        to:       params.email,
+        to:       email,
         subject:  '✅ Konfirmasi Pemesanan Stall – HUT RI ke-81',
         htmlBody: `
           <div style="font-family:sans-serif; max-width:480px;">
             <h2 style="color:#CC0001; border-bottom:2px solid #CC0001; padding-bottom:8px;">
               Pemesanan Stall Diproses
             </h2>
-            <p>Yth. <strong>${params.name}</strong>,</p>
+            <p>Yth. <strong>${escHtml(name)}</strong>,</p>
             <p>Terima kasih! Berikut rincian pemesanan stall Anda:</p>
             <table style="width:100%; border-collapse:collapse; margin:14px 0;">
               <tr style="background:#f9f9f9;">
                 <td style="padding:8px 12px; color:#666; width:40%;">Stall</td>
-                <td style="padding:8px 12px;"><strong>#${params.booths}</strong></td>
+                <td style="padding:8px 12px;"><strong>#${escHtml(requested.join(', '))}</strong></td>
               </tr>
               <tr>
                 <td style="padding:8px 12px; color:#666;">Nama Stall</td>
-                <td style="padding:8px 12px;"><strong>${params.stallname}</strong></td>
+                <td style="padding:8px 12px;"><strong>${escHtml(stallname)}</strong></td>
               </tr>
               <tr style="background:#f9f9f9;">
                 <td style="padding:8px 12px; color:#666;">Lokasi</td>
-                <td style="padding:8px 12px;">${params.location}</td>
+                <td style="padding:8px 12px;">${escHtml(location)}</td>
               </tr>
               <tr style="background:#f9f9f9;">
                 <td style="padding:8px 12px; color:#666;">Total</td>
-                <td style="padding:8px 12px;"><strong style="color:#CC0001;">${params.total}</strong></td>
+                <td style="padding:8px 12px;"><strong style="color:#CC0001;">${escHtml(total)}</strong></td>
               </tr>
               <tr>
                 <td style="padding:8px 12px; color:#666;">No. HP</td>
-                <td style="padding:8px 12px;">${params.phone}</td>
+                <td style="padding:8px 12px;">${escHtml(phone)}</td>
               </tr>
               <tr style="background:#f9f9f9;">
                 <td style="padding:8px 12px; color:#666;">Waktu</td>
@@ -203,38 +244,38 @@ function handleBooking(params) {
     try {
       MailApp.sendEmail({
         to:      COORDINATOR_EMAIL,
-        subject: `📦 Pemesanan Baru: Stall #${params.booths} – ${params.name}`,
+        subject: `📦 Pemesanan Baru: Stall #${requested.join(', ')} – ${name}`,
         htmlBody: `
           <div style="font-family:sans-serif; max-width:480px;">
             <h2 style="color:#CC0001;">Pemesanan Stall Baru Masuk</h2>
             <table style="width:100%; border-collapse:collapse;">
               <tr style="background:#f9f9f9;">
                 <td style="padding:8px 12px; color:#666; width:35%;">Nama</td>
-                <td style="padding:8px 12px;"><strong>${params.name}</strong></td>
+                <td style="padding:8px 12px;"><strong>${escHtml(name)}</strong></td>
               </tr>
               <tr>
                 <td style="padding:8px 12px; color:#666;">Email</td>
-                <td style="padding:8px 12px;">${params.email}</td>
+                <td style="padding:8px 12px;">${escHtml(email)}</td>
               </tr>
               <tr style="background:#f9f9f9;">
                 <td style="padding:8px 12px; color:#666;">No. HP</td>
-                <td style="padding:8px 12px;">${params.phone}</td>
+                <td style="padding:8px 12px;">${escHtml(phone)}</td>
               </tr>
               <tr>
                 <td style="padding:8px 12px; color:#666;">Stall</td>
-                <td style="padding:8px 12px;"><strong>#${params.booths}</strong></td>
+                <td style="padding:8px 12px;"><strong>#${escHtml(requested.join(', '))}</strong></td>
               </tr>
               <tr style="background:#f9f9f9;">
                 <td style="padding:8px 12px; color:#666;">Nama Stall</td>
-                <td style="padding:8px 12px;"><strong>${params.stallname}</strong></td>
+                <td style="padding:8px 12px;"><strong>${escHtml(stallname)}</strong></td>
               </tr>
               <tr>
                 <td style="padding:8px 12px; color:#666;">Lokasi</td>
-                <td style="padding:8px 12px;">${params.location}</td>
+                <td style="padding:8px 12px;">${escHtml(location)}</td>
               </tr>
               <tr>
                 <td style="padding:8px 12px; color:#666;">Total</td>
-                <td style="padding:8px 12px;"><strong style="color:#CC0001;">${params.total}</strong></td>
+                <td style="padding:8px 12px;"><strong style="color:#CC0001;">${escHtml(total)}</strong></td>
               </tr>
               <tr style="background:#f9f9f9;">
                 <td style="padding:8px 12px; color:#666;">Waktu</td>
