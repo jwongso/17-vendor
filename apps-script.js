@@ -11,6 +11,13 @@
 const SHEET_NAME        = 'Bookings';
 const COORDINATOR_EMAIL = 'YOUR_COORDINATOR_EMAIL_HERE'; // e.g. boss@gmail.com
 
+// ── Auto-format column F as Plain Text on sheet open ──────────
+// Prevents Google Sheets from converting booth numbers (e.g. "12, 16, 29") into dates.
+function onOpen() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
+  if (sheet) sheet.getRange('F:F').setNumberFormat('@');
+}
+
 // ── GET: list booked booths OR process a booking ──────────────
 // ?action=book&name=...&email=...&phone=...&booths=...&location=...&total=...
 // Returns: { booked: [...] }  or  { success: true }  or  { success: false, conflict: [...] }
