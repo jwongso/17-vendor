@@ -427,7 +427,7 @@
       <div class="success-view">
         <div class="success-icon">✅</div>
         <h3>Pemesanan Berhasil!</h3>
-        <p>Konfirmasi telah dikirim ke email Anda.<br>Panitia akan menghubungi Anda untuk informasi pembayaran dalam 1x24 jam.</p>
+        <p>Permintaan pemesanan Anda telah terkirim.<br>Anda akan menerima email konfirmasi jika pemesanan berhasil diproses.<br>Jika tidak ada email dalam 5 menit, silakan coba lagi.</p>
         <button class="btn-confirm" onclick="closeModal()">Tutup</button>
       </div>
     </div>
@@ -715,48 +715,17 @@ async function submitBooking() {
       total:    '$' + computeTotal()
     });
 
-    // Apps Script doesn't support CORS headers; use no-cors so the POST goes
-    // through. We can't read the response, so we poll the booked list after
-    // a short delay to detect conflicts.
+    // no-cors: POST goes through but response is unreadable.
+    // We show optimistic success; LockService on the server prevents
+    // double-booking. Vendor receives email only if booking truly succeeded.
     await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body });
 
-    // Wait for Apps Script to finish writing
-    await new Promise(r => setTimeout(r, 2500));
-
-    // Re-read the sheet to see what is now booked
-    const checkData = await fetch('/.netlify/functions/booked').then(r => r.json());
-    const nowTaken  = (checkData.booked || []).map(Number);
-
-    const confirmed = ids.filter(id =>  nowTaken.includes(id));
-    const conflict  = ids.filter(id => !nowTaken.includes(id));
-
-    // Mark every newly-taken booth (ours or someone else's)
-    nowTaken.forEach(id => markTaken(id));
-
-    if (conflict.length === 0) {
-      // All selected booths are now booked — our submission succeeded
-      selected.clear();
-      redrawSVGs();
-      updateBar();
-      document.getElementById('form-view').style.display   = 'none';
-      document.getElementById('success-view').style.display = '';
-
-    } else if (confirmed.length === 0) {
-      // None of our booths made it — someone else got them all first
-      redrawSVGs();
-      updateBar();
-      showError(`Stand #${conflict.join(', ')} baru saja dipesan orang lain. Silakan pilih stand lain dan coba lagi.`);
-      if (selected.size === 0) closeModal();
-      else populateModalSummary();
-
-    } else {
-      // Partial: some confirmed, some taken by someone else
-      selected.clear();
-      redrawSVGs();
-      updateBar();
-      document.getElementById('form-view').style.display   = 'none';
-      document.getElementById('success-view').style.display = '';
-    }
+    ids.forEach(id => markTaken(id));
+    selected.clear();
+    redrawSVGs();
+    updateBar();
+    document.getElementById('form-view').style.display   = 'none';
+    document.getElementById('success-view').style.display = '';
 
   } catch (err) {
     showError('Tidak dapat terhubung ke server. Periksa koneksi internet Anda dan coba lagi.');
