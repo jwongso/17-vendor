@@ -9,6 +9,9 @@ Interactive web app for vendors to select and book stands at an Indonesian Indep
 ### Done
 - [x] `index.html` — complete single-file booking app (no framework, no build step)
 - [x] `apps-script.js` — Google Apps Script backend (serverless, free)
+- [x] `netlify/functions/booked.js` — Netlify proxy: GET booked list (avoids CORS)
+- [x] `netlify/functions/booking.js` — Netlify proxy: POST booking → GET to Apps Script
+- [x] `netlify.toml` — build command auto-injects git commit hash at deploy time
 - [x] SVG overlay on JPEG floor plans (Indoor booths 1–19, Outdoor 20–47)
 - [x] Clickable booths with price-tier colour coding
 - [x] Sticky summary bar: selected stands + running total
@@ -16,17 +19,14 @@ Interactive web app for vendors to select and book stands at an Indonesian Indep
 - [x] Race condition protection: `LockService` mutex + server-side conflict check
 - [x] On-load GET: page reads booked booths from Sheet and greys them out
 - [x] Conflict handling: conflicted booths turn grey instantly, vendor sees error
-- [x] Dual email notification: confirmation to vendor + alert to coordinator
+- [x] Dual email notification: confirmation to vendor + alert to coordinator (non-fatal — email failures don't block booking)
 - [x] Booth reset: coordinator changes Status column to `Cancelled` in Sheet
+- [x] Build hash auto-injected by Netlify (`$COMMIT_REF`) — visible in DevTools console
 
-### Pending / TODO
-- [ ] **Wire up Apps Script URL** — deploy `apps-script.js`, paste URL into `index.html` line 440
-- [ ] **Set coordinator email** — change `YOUR_COORDINATOR_EMAIL_HERE` in `apps-script.js` line 12
-- [ ] **End-to-end test** — submit a test booking, verify Sheet row + both emails arrive
-- [ ] **Verify SVG booth positions** — open `index.html` in browser, confirm overlays align with floor plan images
-- [ ] **Fine-tune SVG coordinates** if any booths are misaligned (coordinates are approximate)
-- [ ] **Optional**: add 30-second auto-refresh of booked status for busy event day
-- [ ] **Optional**: add `payment_status` column to Sheet (Unpaid / Paid / Cancelled)
+### Optional / TODO
+- [ ] Fine-tune SVG booth coordinate positions if any overlays are visually misaligned
+- [ ] Add 30-second auto-refresh of booked status for busy event day
+- [ ] Add `payment_status` column to Sheet (Unpaid / Paid / Cancelled)
 
 ---
 
@@ -34,11 +34,13 @@ Interactive web app for vendors to select and book stands at an Indonesian Indep
 
 | File | Purpose |
 |---|---|
-| `index.html` | Complete UI — open directly in browser or serve with any HTTP server |
+| `index.html` | Complete UI — single file, no build step |
 | `apps-script.js` | Paste into Google Apps Script editor; deploy as Web App |
+| `netlify/functions/booked.js` | Serverless proxy: GET booked booth list |
+| `netlify/functions/booking.js` | Serverless proxy: submit a booking |
+| `netlify.toml` | Netlify config: publish dir, functions dir, Node 18, build hash injection |
 | `indoor.jpeg` | Indoor floor plan (1065×654 px); booths 1–19 |
 | `outdoor.jpeg` | Outdoor floor plan (1065×653 px); booths 20–47 |
-| `webform.jpeg` | Original design reference (not used as asset) |
 
 ---
 
@@ -47,19 +49,26 @@ Interactive web app for vendors to select and book stands at an Indonesian Indep
 ```
 Browser (index.html)
     │
-    ├── GET  → Apps Script → reads Sheet → returns { booked: [...] }
-    │                                      page greys out taken booths
+    ├── GET  /.netlify/functions/booked
+    │         └── Netlify function → GET Apps Script → { booked: [...] }
+    │                                  page greys out taken booths
     │
-    └── POST → Apps Script
-                  │
-                  ├── LockService.tryLock()        (mutex: blocks concurrent writes)
-                  ├── re-read Sheet                (check-then-act, atomic)
-                  ├── conflict? → return error     (UI greys booth, shows message)
-                  ├── no conflict → appendRow()    (Status = Active)
-                  ├── MailApp: vendor email
-                  ├── MailApp: coordinator email
-                  └── releaseLock()
+    └── POST /.netlify/functions/booking
+              └── Netlify function → GET Apps Script ?action=book&...
+                        │
+                        ├── LockService.tryLock()        (mutex: blocks concurrent writes)
+                        ├── re-read Sheet                (check-then-act, atomic)
+                        ├── conflict? → return { success: false, conflict: [...] }
+                        ├── no conflict → appendRow()    (Status = Active)
+                        ├── MailApp: vendor email        (non-fatal try-catch)
+                        ├── MailApp: coordinator email   (non-fatal try-catch)
+                        ├── releaseLock()
+                        └── return { success: true }
 ```
+
+**Why GET instead of POST to Apps Script?**
+Apps Script POST requests trigger a browser-session redirect that fails server-to-server.
+GET requests work reliably; all booking params are passed as query string.
 
 **Google Sheet = Single Source of Truth.**
 The UI has no local persistence; every page load re-reads the sheet.
@@ -115,6 +124,7 @@ Add these headers in row 1:
 1. In the sheet: **Extensions → Apps Script**
 2. Delete the default code; paste contents of `apps-script.js`
 3. Set `COORDINATOR_EMAIL` on line 12 to the coordinator's Gmail address
+   - Multiple recipients: use comma — `"a@gmail.com, b@gmail.com"`
 4. Save (Ctrl+S)
 
 ### 3. Deploy as Web App
@@ -125,26 +135,21 @@ Add these headers in row 1:
 4. Click **Deploy** — authorize Gmail + Sheets permissions when prompted
 5. Copy the Web App URL
 
-> Every time you edit the Apps Script, create a **new deployment** to get an updated URL.
+> Every time you edit the Apps Script code, go to **Deploy → Manage deployments → Edit (pencil) → New version → Update** to apply changes. The URL stays the same.
 
-### 4. Wire up index.html
+### 4. Update Netlify functions
 
-Open `index.html`, find line 440:
-
-```javascript
-const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
-```
-
-Replace with the Web App URL from step 3.
+In both `netlify/functions/booked.js` and `netlify/functions/booking.js`, update `APPS_SCRIPT_URL` to the Web App URL from step 3. Commit and push — Netlify redeploys automatically.
 
 ### 5. Test
 
-1. Open `index.html` in a browser (file:// or any HTTP server)
-2. Select a booth, fill the form, submit
-3. Verify: Sheet has new row with `Status = Active`
-4. Verify: vendor email received
-5. Verify: coordinator email received
-6. Reload the page: booked booth should appear grey
+1. Open `https://vermillion-lokum-980f0a.netlify.app`
+2. Confirm DevTools console shows `Build: <commit hash>`
+3. Select a booth, fill the form, submit
+4. Verify: Sheet has new row with `Status = Active`
+5. Verify: vendor email received
+6. Verify: coordinator email received
+7. Reload the page: booked booth should appear grey
 
 ---
 
@@ -162,13 +167,32 @@ Add a row manually in the sheet. Fill column **E (Booths)** with the booth numbe
 
 ---
 
+## Debugging
+
+Open DevTools → Console. On page load:
+```
+Build: 7ad638a        ← confirms latest Netlify deploy
+```
+
+On booking submit:
+```
+Booking response (HTTP 200): {"success":true}
+```
+or
+```
+Booking response (HTTP 200): {"success":false,"error":"..."}   ← exact Apps Script error
+```
+
+---
+
 ## Local Development
 
 ```bash
-cd ~/proj/vendor
+cd ~/proj/17-vendor
 python3 -m http.server 8080
 # open http://localhost:8080
 ```
 
-> Note: if running on a remote/container machine, open `index.html` directly
-> in your browser using the `file://` path instead.
+> Netlify functions are not available locally. For local testing, temporarily set `APPS_SCRIPT_URL`
+> directly in `index.html` and submit via `no-cors` fetch, or use `netlify dev` if Netlify CLI is installed.
+
