@@ -5,8 +5,12 @@ export async function onRequest() {
   try {
     const res  = await fetch(APPS_SCRIPT_URL, { redirect: 'follow' });
     const data = await res.json();
-    return Response.json(data);
+    return Response.json(data, {
+      headers: { 'Cache-Control': 'no-store' }
+    });
   } catch (err) {
-    return Response.json({ booked: [] });
+    return Response.json({ booked: [] }, {
+      headers: { 'Cache-Control': 'no-store' }
+    });
   }
 }

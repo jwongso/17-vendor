@@ -37,7 +37,7 @@ function getBooked() {
   const booked = [];
   for (let i = 1; i < rows.length; i++) {
     const status = rows[i][8]; // column I (Status)
-    if (status === 'Cancelled') continue;
+    if (String(status).trim().toLowerCase() === 'cancelled') continue;
     String(rows[i][5]).split(',').forEach(s => { // column F (Booths)
       const n = parseInt(s.trim());
       if (!isNaN(n)) booked.push(n);
@@ -74,7 +74,7 @@ function handleBooking(params) {
     // Check every Active row for overlap with requested booths
     const conflict = [];
     for (let i = 1; i < rows.length; i++) {
-      if (rows[i][8] === 'Cancelled') continue; // column I (Status)
+      if (String(rows[i][8]).trim().toLowerCase() === 'cancelled') continue; // column I (Status)
       String(rows[i][5]).split(',').forEach(s => { // column F (Booths)
         const n = parseInt(s.trim());
         if (requested.includes(n) && !conflict.includes(n)) conflict.push(n);
