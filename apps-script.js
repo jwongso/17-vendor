@@ -35,17 +35,21 @@ function getBooked() {
   const rows  = sheet.getDataRange().getValues();
 
   const booked = [];
+  const info   = {};
   for (let i = 1; i < rows.length; i++) {
     const status = rows[i][8]; // column I (Status)
     if (String(status).trim().toLowerCase() === 'cancelled') continue;
     String(rows[i][5]).split(',').forEach(s => { // column F (Booths)
       const n = parseInt(s.trim());
-      if (!isNaN(n)) booked.push(n);
+      if (!isNaN(n)) {
+        booked.push(n);
+        info[n] = { name: rows[i][1], stallname: rows[i][4] }; // col B, E
+      }
     });
   }
 
   return ContentService
-    .createTextOutput(JSON.stringify({ booked }))
+    .createTextOutput(JSON.stringify({ booked, info }))
     .setMimeType(ContentService.MimeType.JSON);
 }
 

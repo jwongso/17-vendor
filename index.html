@@ -582,8 +582,9 @@ const BOOTHS = {
 const PRICE_COLOR = { 200: '#f5c400', 220: '#cc0001', 250: '#ff85a1', ft: '#9b59b6' };
 const ALL_BOOTHS  = [...BOOTHS.indoor, ...BOOTHS.outdoor];
 
-const selected = new Set();
-const taken    = new Set();
+const selected    = new Set();
+const taken       = new Set();
+const bookedNames = {};   // id → { name, stallname }
 
 // ── Colour helper ─────────────────────────────────────────────
 function boothColor(booth) {
@@ -649,6 +650,15 @@ function buildSVG(tab) {
 
     g.appendChild(shape);
     g.appendChild(text);
+
+    // Tooltip for taken booths
+    if (taken.has(booth.id) && bookedNames[booth.id]) {
+      const info  = bookedNames[booth.id];
+      const label = info.stallname ? `${info.stallname} (${info.name})` : info.name;
+      const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      title.textContent = label;
+      g.appendChild(title);
+    }
 
     // Power icon on indoor booths (all are rect, 1–18)
     if (tab === 'indoor' && booth.shape !== 'circle') {
@@ -851,6 +861,11 @@ async function loadBooked() {
     const data = await res.json();
     if (Array.isArray(data.booked)) {
       data.booked.forEach(id => taken.add(parseInt(id)));
+    }
+    if (data.info) {
+      Object.entries(data.info).forEach(([id, info]) => {
+        bookedNames[parseInt(id)] = info;
+      });
     }
   } catch (e) {
     console.warn('Could not load booked status:', e);
