@@ -207,34 +207,29 @@ Why this helps:
 
 These do not materially change the booking flow, but they reduce avoidable risk.
 
-### 7. Stop logging request/response content with user data
+### ✅ 7. Stop logging request/response content with user data
+
+**Status: DONE** — committed `3b426ff`
 
 Target: `functions/api/booking.js`
 
-Issue:
+Implementation:
 
-- The proxy currently logs a truncated Apps Script response.
-- That response can contain booking-related data and should not be logged unless needed for debugging.
+- Removed `console.log('Apps Script response:', text.substring(0, 300))`.
+- No booking payload content is logged anywhere in the proxy.
 
-Suggested change:
+### ✅ 8. Tighten request validation at the Cloudflare layer
 
-- Remove the response logging or replace it with status-only logging.
-
-### 8. Tighten request validation at the Cloudflare layer
+**Status: DONE** — committed `3b426ff`
 
 Target: `functions/api/booking.js`
 
-Suggested change:
+Implementation:
 
-- Reject non-`POST` methods as it already does.
-- Also validate:
-  - content type is `application/x-www-form-urlencoded`
-  - request body length stays within a small limit
-  - only expected fields are forwarded upstream
-
-Why this helps:
-
-- Reduces noisy or malformed traffic before it reaches Apps Script.
+- Added `MAX_BODY_BYTES = 4096` constant; checked both `Content-Length` header and actual body length — returns 413 if exceeded.
+- Added content-type check: rejects with 415 if not `application/x-www-form-urlencoded`.
+- Added `FORWARDED_FIELDS = ['name', 'stallname', 'email', 'phone', 'booths']` allowlist; only those fields are forwarded upstream — all other fields are silently dropped.
+- Added `jsonResponse()` helper that adds `Cache-Control: no-store` and security headers to all responses.
 
 ### 9. Keep server-side validation authoritative
 
@@ -254,34 +249,31 @@ Why this helps:
 - Prevents malformed data from being stored.
 - Makes the sheet more reliable over time.
 
-### 10. Add basic response security headers
+### ✅ 10. Add basic response security headers
 
-Target: `functions/api/booked.js`, `functions/api/booking.js`, optionally `index.html`
+**Status: DONE (booking.js)** — committed `3b426ff` — ⚠️ booked.js still missing headers
 
-Suggested change:
+Target: `functions/api/booking.js` ✅, `functions/api/booked.js` ⏳
 
-- Add:
+Implementation so far:
+
+- `booking.js` `jsonResponse()` helper adds to every response:
   - `X-Content-Type-Options: nosniff`
   - `Referrer-Policy: strict-origin-when-cross-origin`
-  - `X-Frame-Options: DENY`
-- Optionally add a CSP for the static page, but only after testing because the page uses inline script and style.
+  - `Cache-Control: no-store`
+- `booked.js` still returns responses without these headers — needs a follow-up fix.
 
-Why this helps:
+### ✅ 11. Optional origin checking for browser requests
 
-- Small improvement with little cost.
-
-### 11. Optional origin checking for browser requests
+**Status: DONE** — committed `3b426ff`
 
 Target: `functions/api/booking.js`
 
-Suggested change:
+Implementation:
 
-- If an `Origin` header is present, require it to match the site host.
-- Do not rely on this as the only control.
-
-Why this helps:
-
-- Blocks casual cross-site browser submissions.
+- If `Origin` header is present, parses it as a URL and compares `host` to the request's own `host`.
+- Returns 403 `Forbidden origin` if they don't match.
+- If `Origin` is absent (e.g. server-to-server), the check is skipped — not relied on as sole control.
 
 ## Recommended order
 
@@ -310,93 +302,25 @@ Updated assessment from measured runs:
 
 ---
 
-## Review findings: better, but not yet ideal
+## Review findings — addressed in commit `3b426ff`
 
-The startup path is clearly better, but it is still not optimal or ideal.
+### ✅ 1. High: Apps Script cache invalidated after successful booking
 
-### 1. High: Apps Script booked-booth cache is not invalidated after a successful booking
+Verified: `handleBooking()` calls `CacheService.getScriptCache().remove(BOOKED_CACHE_KEY)` at line 221 immediately after the booking row is written, before sending emails. A redundant second `remove('booked_v1')` also exists at line 328 — safe but should be cleaned up to use the constant.
 
-Issue:
+### ✅ 2. Medium: Single contiguous E:I read
 
-- `getBooked()` stores `booked_v1` in `apps-script.js` using `CacheService`.
-- `handleBooking()` writes the new booking row, but does not remove that cache entry afterwards.
-- `functions/api/booked.js` also adds CDN caching on top.
-- Combined, this means other visitors can still see a newly booked booth as available until the cache chain expires.
+Fixed: `getBooked()` now uses one `sheet.getRange(2, 5, lastRow - 1, 5).getDisplayValues()` call. Column offsets: `[0]` stallname, `[1]` booths, `[4]` status.
 
-Why this matters:
+### ✅ 3. Medium: Security hardening in booking proxy
 
-- This is a correctness gap, not just a performance tradeoff.
-- The booking conflict check still protects final booking integrity, but the UI can remain stale longer than necessary.
-- Earlier text in this plan implied this invalidation was already implemented; the current code does not match that claim.
+Fixed in `booking.js`: PII logging removed; field allowlist, content-type check, body-size limit, origin check, and security response headers all added via `jsonResponse()` helper.
 
-Improvement needed:
+⏳ Still pending: `booked.js` missing `X-Content-Type-Options` / `Referrer-Policy` headers (item 10 follow-up).
 
-- In `apps-script.js`, remove `booked_v1` from `CacheService` immediately after a successful booking write.
-- After that, verify the stale-window behaviour again with browser profiling and two-browser booking tests.
-- If needed, add a `fresh=1` bypass mode to `/api/booked` for post-booking refreshes.
+## Remaining open items
 
-### 2. Medium: narrower sheet reads are improved, but not yet ideal
-
-Issue:
-
-- `getBooked()` no longer uses `getDataRange()`, which is an improvement.
-- However, it now makes three separate Sheets reads for columns E, F, and I.
-- In Apps Script, one contiguous `E:I` read is often a better tradeoff than multiple separate calls while still avoiding a full-sheet scan.
-
-Why this matters:
-
-- The current change is better than the original implementation.
-- It is probably not the most efficient version of the optimisation.
-- Multiple range calls add extra Apps Script / Sheets call overhead.
-
-Improvement needed:
-
-- Replace the three single-column reads with one contiguous `E:I` range read.
-- Keep the same logic of only using stall name, booth list, and status from that smaller range.
-- Re-measure cold and warm `loadBooked fetch` after the change.
-
-### 3. Medium: security hardening is still incomplete
-
-Issue:
-
-- `functions/api/booking.js` still logs the upstream Apps Script response body.
-- The booking proxy still accepts and forwards arbitrary form payloads without tighter filtering.
-- There is still no explicit origin/content-type/body-size filtering at the Cloudflare layer.
-
-Why this matters:
-
-- For a small volunteer system, this may be acceptable operationally.
-- It is still not ideal relative to the original goal of improving both speed and security.
-- Logging response bodies can expose unnecessary booking data in logs.
-
-Improvement needed:
-
-- Remove response-body logging or replace it with status-only logging.
-- Accept only expected fields before forwarding upstream.
-- Reject unsupported content types.
-- Add a small request-size limit.
-- Optionally validate `Origin` when present.
-- Add small response-security headers where safe.
-
-## What “ideal” would look like
-
-For this project size, a closer-to-ideal state would be:
-
-1. Repeat visits show booked booths immediately from browser cache.
-2. Warm `/api/booked` requests are served from edge cache in a few milliseconds.
-3. Apps Script cache is invalidated immediately after bookings so stale display windows stay short.
-4. `getBooked()` uses a single narrow sheet read instead of full-sheet or multiple fragmented reads.
-5. The booking proxy strips unnecessary input and logs no booking payload content.
-6. Cold-load performance is re-measured after correctness and cache invalidation changes.
-
-## Practical next steps
-
-If the goal is to move from “better” to “closer to ideal”, do these next:
-
-1. Fix Apps Script cache invalidation after successful bookings.
-2. Replace the three separate sheet reads with one contiguous `E:I` read.
-3. Tighten `functions/api/booking.js` request validation and remove response-body logging.
-4. Re-run the browser profiler in three scenarios:
-   - private window / no localStorage
-   - repeat visit with localStorage
-   - after a successful booking from a second browser session
+1. **Item 6** — Preload `Indoor.jpg` (`<link rel="preload">` in `index.html`)
+2. **Item 9** — Apps Script extra hardening: dedup booth IDs server-side, enforce max field lengths, reject control characters beyond the `isSafe()` prefix check
+3. **Item 10 follow-up** — Add security headers to `booked.js`
+4. **Cleanup** — Line 328 in `apps-script.js` uses hardcoded `'booked_v1'` instead of `BOOKED_CACHE_KEY` constant
