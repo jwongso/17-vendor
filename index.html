@@ -1063,7 +1063,7 @@ async function submitBooking() {
       selected.clear();
       document.getElementById('form-view').style.display    = 'none';
       document.getElementById('success-view').style.display = '';
-      loadBooked(); // refresh booked data + tooltips
+      loadBooked({ fresh: true }); // refresh booked data + tooltips without cached API response
 
     } else if (data.conflict && data.conflict.length) {
       const nums = data.conflict.join(', ');
@@ -1120,7 +1120,8 @@ function saveBookedToCache(data) {
   } catch (e) { /* storage full or private mode — ignore */ }
 }
 
-async function loadBooked() {
+async function loadBooked(options = {}) {
+  const { fresh = false } = options;
   const warning = document.getElementById('booked-warning');
   profile.start('loadBooked total');
 
@@ -1133,8 +1134,8 @@ async function loadBooked() {
 
   try {
     profile.start('loadBooked fetch');
-    const res  = await fetch('/api/booked');
-    profile.end('loadBooked fetch', `status=${res.status}`);
+    const res  = await fetch(fresh ? '/api/booked?fresh=1' : '/api/booked');
+    profile.end('loadBooked fetch', `status=${res.status}${fresh ? ' fresh=1' : ''}`);
 
     profile.start('loadBooked parse-json');
     const data = await res.json();

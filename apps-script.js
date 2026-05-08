@@ -10,6 +10,8 @@
 
 const SHEET_NAME        = 'Bookings';
 const COORDINATOR_EMAIL = 'YOUR_COORDINATOR_EMAIL_HERE'; // e.g. boss@gmail.com
+const BOOKED_CACHE_KEY  = 'booked_v1';
+const BOOKED_CACHE_TTL  = 30;
 
 // ── Booth price map (mirrors index.html BOOTHS array) ─────────
 const BOOTH_PRICES = {
@@ -50,9 +52,8 @@ function doGet(e) {
 }
 
 function getBooked() {
-  const cache     = CacheService.getScriptCache();
-  const cacheKey  = 'booked_v1';
-  const cached    = cache.get(cacheKey);
+  const cache   = CacheService.getScriptCache();
+  const cached  = cache.get(BOOKED_CACHE_KEY);
   if (cached) {
     return ContentService
       .createTextOutput(cached)
@@ -60,35 +61,36 @@ function getBooked() {
   }
 
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-  // Read only columns E, F, I (stallname, booths, status) — avoids full row scan
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) {
     const empty = JSON.stringify({ booked: [], info: {} });
-    cache.put(cacheKey, empty, 30);
+    cache.put(BOOKED_CACHE_KEY, empty, BOOKED_CACHE_TTL);
     return ContentService.createTextOutput(empty).setMimeType(ContentService.MimeType.JSON);
   }
 
-  const colE = sheet.getRange(2, 5, lastRow - 1, 1).getDisplayValues(); // stallname
-  const colF = sheet.getRange(2, 6, lastRow - 1, 1).getDisplayValues(); // booths
-  const colI = sheet.getRange(2, 9, lastRow - 1, 1).getDisplayValues(); // status
+  // Read one contiguous block (E:I) instead of three separate range calls.
+  const rows = sheet.getRange(2, 5, lastRow - 1, 5).getDisplayValues();
 
   const booked = [];
   const info   = {};
-  for (let i = 0; i < colF.length; i++) {
-    if (String(colI[i][0]).trim().toLowerCase() === 'cancelled') continue;
-    String(colF[i][0]).split(',').forEach(s => {
-      const n = parseInt(s.trim());
+  for (let i = 0; i < rows.length; i++) {
+    const stallname = rows[i][0];
+    const booths    = rows[i][1];
+    const status    = rows[i][4];
+    if (String(status).trim().toLowerCase() === 'cancelled') continue;
+    String(booths).split(',').forEach(s => {
+      const n = parseInt(s.trim(), 10);
       if (!isNaN(n)) {
         booked.push(n);
         if (!info[n]) {
-          info[n] = { stallname: colE[i][0] }; // col E only — no vendor name (PII)
+          info[n] = { stallname }; // col E only — no vendor name (PII)
         }
       }
     });
   }
 
   const result = JSON.stringify({ booked, info });
-  cache.put(cacheKey, result, 30); // cache for 30 seconds
+  cache.put(BOOKED_CACHE_KEY, result, BOOKED_CACHE_TTL);
   return ContentService
     .createTextOutput(result)
     .setMimeType(ContentService.MimeType.JSON);
@@ -176,17 +178,22 @@ function handleBooking(params) {
 
   try {
     const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-    const rows  = sheet.getDataRange().getDisplayValues(); // getDisplayValues avoids Date auto-conversion
+    const lastDataRow = sheet.getLastRow();
+    const rows = lastDataRow < 2
+      ? []
+      : sheet.getRange(2, 6, lastDataRow - 1, 4).getDisplayValues(); // F:I only
+    const requestedSet = new Set(requested);
 
     // Check every Active row for overlap with requested booths
-    const conflict = [];
-    for (let i = 1; i < rows.length; i++) {
-      if (String(rows[i][8]).trim().toLowerCase() === 'cancelled') continue; // column I (Status)
-      String(rows[i][5]).split(',').forEach(s => { // column F (Booths)
-        const n = parseInt(s.trim());
-        if (requested.includes(n) && !conflict.includes(n)) conflict.push(n);
+    const conflictSet = new Set();
+    for (let i = 0; i < rows.length; i++) {
+      if (String(rows[i][3]).trim().toLowerCase() === 'cancelled') continue; // column I (Status)
+      String(rows[i][0]).split(',').forEach(s => { // column F (Booths)
+        const n = parseInt(s.trim(), 10);
+        if (requestedSet.has(n)) conflictSet.add(n);
       });
     }
+    const conflict = Array.from(conflictSet);
 
     if (conflict.length > 0) {
       return ContentService
@@ -211,6 +218,7 @@ function handleBooking(params) {
       total,                      // H: Total   (server-computed)
       'Active'                    // I: Status  (change to 'Cancelled' to unblock)
     ]]);
+    CacheService.getScriptCache().remove(BOOKED_CACHE_KEY);
 
     // Confirmation email to the vendor (non-fatal if it fails)
     try {

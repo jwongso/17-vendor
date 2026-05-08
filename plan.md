@@ -307,3 +307,96 @@ Updated assessment from measured runs:
 - If further improvement is needed, the next step is not more SVG work; it is either:
   - better cold-path cache invalidation strategy and verification, or
   - moving booked-status storage/read logic off Apps Script entirely.
+
+---
+
+## Review findings: better, but not yet ideal
+
+The startup path is clearly better, but it is still not optimal or ideal.
+
+### 1. High: Apps Script booked-booth cache is not invalidated after a successful booking
+
+Issue:
+
+- `getBooked()` stores `booked_v1` in `apps-script.js` using `CacheService`.
+- `handleBooking()` writes the new booking row, but does not remove that cache entry afterwards.
+- `functions/api/booked.js` also adds CDN caching on top.
+- Combined, this means other visitors can still see a newly booked booth as available until the cache chain expires.
+
+Why this matters:
+
+- This is a correctness gap, not just a performance tradeoff.
+- The booking conflict check still protects final booking integrity, but the UI can remain stale longer than necessary.
+- Earlier text in this plan implied this invalidation was already implemented; the current code does not match that claim.
+
+Improvement needed:
+
+- In `apps-script.js`, remove `booked_v1` from `CacheService` immediately after a successful booking write.
+- After that, verify the stale-window behaviour again with browser profiling and two-browser booking tests.
+- If needed, add a `fresh=1` bypass mode to `/api/booked` for post-booking refreshes.
+
+### 2. Medium: narrower sheet reads are improved, but not yet ideal
+
+Issue:
+
+- `getBooked()` no longer uses `getDataRange()`, which is an improvement.
+- However, it now makes three separate Sheets reads for columns E, F, and I.
+- In Apps Script, one contiguous `E:I` read is often a better tradeoff than multiple separate calls while still avoiding a full-sheet scan.
+
+Why this matters:
+
+- The current change is better than the original implementation.
+- It is probably not the most efficient version of the optimisation.
+- Multiple range calls add extra Apps Script / Sheets call overhead.
+
+Improvement needed:
+
+- Replace the three single-column reads with one contiguous `E:I` range read.
+- Keep the same logic of only using stall name, booth list, and status from that smaller range.
+- Re-measure cold and warm `loadBooked fetch` after the change.
+
+### 3. Medium: security hardening is still incomplete
+
+Issue:
+
+- `functions/api/booking.js` still logs the upstream Apps Script response body.
+- The booking proxy still accepts and forwards arbitrary form payloads without tighter filtering.
+- There is still no explicit origin/content-type/body-size filtering at the Cloudflare layer.
+
+Why this matters:
+
+- For a small volunteer system, this may be acceptable operationally.
+- It is still not ideal relative to the original goal of improving both speed and security.
+- Logging response bodies can expose unnecessary booking data in logs.
+
+Improvement needed:
+
+- Remove response-body logging or replace it with status-only logging.
+- Accept only expected fields before forwarding upstream.
+- Reject unsupported content types.
+- Add a small request-size limit.
+- Optionally validate `Origin` when present.
+- Add small response-security headers where safe.
+
+## What “ideal” would look like
+
+For this project size, a closer-to-ideal state would be:
+
+1. Repeat visits show booked booths immediately from browser cache.
+2. Warm `/api/booked` requests are served from edge cache in a few milliseconds.
+3. Apps Script cache is invalidated immediately after bookings so stale display windows stay short.
+4. `getBooked()` uses a single narrow sheet read instead of full-sheet or multiple fragmented reads.
+5. The booking proxy strips unnecessary input and logs no booking payload content.
+6. Cold-load performance is re-measured after correctness and cache invalidation changes.
+
+## Practical next steps
+
+If the goal is to move from “better” to “closer to ideal”, do these next:
+
+1. Fix Apps Script cache invalidation after successful bookings.
+2. Replace the three separate sheet reads with one contiguous `E:I` read.
+3. Tighten `functions/api/booking.js` request validation and remove response-body logging.
+4. Re-run the browser profiler in three scenarios:
+   - private window / no localStorage
+   - repeat visit with localStorage
+   - after a successful booking from a second browser session
