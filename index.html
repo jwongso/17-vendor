@@ -160,6 +160,50 @@
     .tab-pane { display: none; }
     .tab-pane.active { display: block; }
 
+    /* ── Booth info panel ───────────────────────────────────── */
+    .booth-info {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 10px 16px 0;
+    }
+    .booth-info-card[hidden] { display: none; }
+    .booth-info-card {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      background: #f4f4f4;
+      border: 1px solid #d6d6d6;
+      border-left: 4px solid #888;
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .booth-info-copy {
+      min-width: 0;
+      flex: 1;
+    }
+    .booth-info-title {
+      font-size: 0.86rem;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 4px;
+    }
+    .booth-info-text {
+      font-size: 0.83rem;
+      color: #555;
+      line-height: 1.5;
+    }
+    .booth-info-close {
+      border: none;
+      background: transparent;
+      color: #666;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 2px 0;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
     /* ── Sticky summary bar ─────────────────────────────────── */
     .summary-bar {
       position: fixed;
@@ -550,6 +594,16 @@
   <p class="swipe-hint">👆 Geser kiri/kanan untuk melihat semua stall</p>
 </div>
 
+<div class="booth-info">
+  <div class="booth-info-card" id="booth-info-card" hidden>
+    <div class="booth-info-copy">
+      <div class="booth-info-title" id="booth-info-title"></div>
+      <div class="booth-info-text" id="booth-info-text"></div>
+    </div>
+    <button type="button" class="booth-info-close" onclick="hideBoothInfo()">Tutup</button>
+  </div>
+</div>
+
 <div class="bar-spacer"></div>
 
 <!-- ── Sticky bar ───────────────────────────────────────────── -->
@@ -887,6 +941,7 @@ const selected    = new Set();
 const taken       = new Set();
 const bookedNames = {};   // id → { name, stallname }
 const boothNodes  = {};   // id → { g, shape, titleEl } — built once in initSVG
+let activeBoothInfoId = null;
 
 // ── Colour helper ─────────────────────────────────────────────
 function boothColor(booth) {
@@ -994,9 +1049,37 @@ function updateSVG(tab) {
 
 function redrawSVGs() { updateSVG('indoor'); updateSVG('outdoor'); }
 
+function showBoothInfo(id) {
+  const card = document.getElementById('booth-info-card');
+  const title = document.getElementById('booth-info-title');
+  const text = document.getElementById('booth-info-text');
+  const meta = getMeta(id);
+  if (!card || !title || !text || !meta) return;
+
+  const info = bookedNames[id];
+  const location = isIndoor(id) ? 'Indoor' : 'Outdoor';
+  title.textContent = `Stall #${id} (${location}) sudah dipesan`;
+  text.textContent = info?.stallname
+    ? `Nama stall: ${info.stallname}`
+    : 'Stall ini sudah tidak tersedia untuk dipilih.';
+  card.hidden = false;
+  activeBoothInfoId = id;
+}
+
+function hideBoothInfo() {
+  const card = document.getElementById('booth-info-card');
+  if (!card) return;
+  card.hidden = true;
+  activeBoothInfoId = null;
+}
+
 // ── Toggle selection ──────────────────────────────────────────
 function toggleBooth(id) {
-  if (taken.has(id)) return;
+  if (taken.has(id)) {
+    showBoothInfo(id);
+    return;
+  }
+  hideBoothInfo();
   selected.has(id) ? selected.delete(id) : selected.add(id);
   redrawSVGs();
   updateBar();
@@ -1046,6 +1129,7 @@ function switchTab(tab, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('pane-' + tab).classList.add('active');
   btn.classList.add('active');
+  hideBoothInfo();
 }
 
 // ── Modal helpers ─────────────────────────────────────────────
@@ -1404,6 +1488,11 @@ async function loadBooked(options = {}) {
         }
       } else {
         hideBookedWarning();
+      }
+
+      if (activeBoothInfoId !== null) {
+        if (taken.has(activeBoothInfoId)) showBoothInfo(activeBoothInfoId);
+        else hideBoothInfo();
       }
 
       profile.end('loadBooked apply-state', `booked=${taken.size}`);
