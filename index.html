@@ -318,6 +318,26 @@
     #turnstile-widget {
       min-height: 65px;
     }
+    .modal-status[hidden] { display: none; }
+    .modal-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #fff8e8;
+      border: 1px solid #f1d58a;
+      color: #7a5a00;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 14px;
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+    .modal-status .spinner {
+      border-color: rgba(122,90,0,0.18);
+      border-top-color: #7a5a00;
+      margin-right: 0;
+      flex-shrink: 0;
+    }
 
     /* Modal actions */
     .form-actions { display: flex; gap: 10px; margin-top: 18px; }
@@ -565,6 +585,11 @@
         <div class="section-label">Stall yang dipilih:</div>
         <div class="booth-tags" id="modal-tags"></div>
         <div class="total-line">Total: <span class="total-amount" id="modal-total"></span></div>
+      </div>
+
+      <div class="modal-status" id="modal-status" hidden>
+        <span class="spinner" aria-hidden="true"></span>
+        <span id="modal-status-text">Memeriksa ketersediaan stall terbaru...</span>
       </div>
 
       <div class="error-msg" id="error-msg"></div>
@@ -1098,9 +1123,15 @@ window.onTurnstileLoad = () => {
   toggleConfirmBtn();
 };
 
+function setModalChecking(isChecking, message = 'Memeriksa ketersediaan stall terbaru...') {
+  const status = document.getElementById('modal-status');
+  const text = document.getElementById('modal-status-text');
+  if (!status || !text) return;
+  text.textContent = message;
+  status.hidden = !isChecking;
+}
+
 async function openModal() {
-  if (selected.size === 0) return;
-  await loadBooked({ fresh: true, skipCacheHydrate: true });
   if (selected.size === 0) return;
   ensureTurnstileWidget();
   resetTurnstile();
@@ -1109,6 +1140,15 @@ async function openModal() {
   document.getElementById('form-view').style.display    = '';
   document.getElementById('success-view').style.display = 'none';
   document.getElementById('modal').classList.add('open');
+  setModalChecking(true);
+
+  try {
+    await loadBooked({ fresh: true, skipCacheHydrate: true });
+    if (selected.size === 0) return;
+    populateModalSummary();
+  } finally {
+    setModalChecking(false);
+  }
 }
 
 function toggleConfirmBtn() {
@@ -1125,6 +1165,7 @@ function closeModal() {
     el.classList.remove('field-error');
   });
   document.getElementById('f-agree').checked = false;
+  setModalChecking(false);
   resetTurnstile();
   document.getElementById('btn-confirm').disabled = true;
 }
