@@ -649,6 +649,92 @@ Tenda 3m x 3m</li>
 <script>
 console.log('Build: __HASH__');
 
+const profile = (() => {
+  const prefix = '[BoothProfile]';
+  const origin = performance.now();
+  const openMarks = new Map();
+  const completed = [];
+
+  function round(value) {
+    return Math.round(value * 100) / 100;
+  }
+
+  function sinceStart() {
+    return round(performance.now() - origin);
+  }
+
+  function start(name, detail) {
+    openMarks.set(name, performance.now());
+    console.debug(`${prefix} start ${name}`, detail || '');
+  }
+
+  function end(name, detail) {
+    const startedAt = openMarks.get(name);
+    if (typeof startedAt !== 'number') return;
+    const duration = round(performance.now() - startedAt);
+    openMarks.delete(name);
+    completed.push({
+      step: name,
+      duration_ms: duration,
+      since_start_ms: sinceStart(),
+      detail: detail || ''
+    });
+    console.debug(`${prefix} end ${name}: ${duration}ms`, detail || '');
+  }
+
+  function mark(name, detail) {
+    completed.push({
+      step: name,
+      duration_ms: 0,
+      since_start_ms: sinceStart(),
+      detail: detail || ''
+    });
+    console.debug(`${prefix} mark ${name} @ ${sinceStart()}ms`, detail || '');
+  }
+
+  function report(label) {
+    const nav = performance.getEntriesByType('navigation')[0];
+    console.groupCollapsed(`${prefix} ${label}`);
+    if (nav) {
+      console.log('Navigation timing', {
+        domContentLoaded_ms: round(nav.domContentLoadedEventEnd),
+        loadEvent_ms: round(nav.loadEventEnd),
+        responseStart_ms: round(nav.responseStart),
+        responseEnd_ms: round(nav.responseEnd)
+      });
+    }
+    console.table(completed);
+    console.groupEnd();
+  }
+
+  return { start, end, mark, report };
+})();
+
+const startupProfile = {
+  bookedLoaded: false,
+  windowLoaded: document.readyState === 'complete',
+  reported: false
+};
+
+function maybeReportStartupProfile() {
+  if (startupProfile.reported || !startupProfile.bookedLoaded || !startupProfile.windowLoaded) return;
+  startupProfile.reported = true;
+  profile.mark('startup-complete');
+  profile.report('Startup Summary');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  profile.mark('dom-content-loaded');
+}, { once: true });
+
+window.addEventListener('load', () => {
+  startupProfile.windowLoaded = true;
+  profile.mark('window-load');
+  maybeReportStartupProfile();
+}, { once: true });
+
+profile.mark('script-start');
+
 const BOOTHS = {
   indoor: [
     { id:  1, price: 200,             x: 282, y: 160, w: 43, h: 32 },
@@ -994,10 +1080,19 @@ async function submitBooking() {
 // ── Load currently booked booths via Cloudflare proxy ───────────
 async function loadBooked() {
   const warning = document.getElementById('booked-warning');
+  profile.start('loadBooked total');
   try {
+    profile.start('loadBooked fetch');
     const res  = await fetch('/api/booked');
+    profile.end('loadBooked fetch', `status=${res.status}`);
+
+    profile.start('loadBooked parse-json');
     const data = await res.json();
+    profile.end('loadBooked parse-json');
+
     if (data.error) throw new Error(data.error);
+
+    profile.start('loadBooked apply-state');
     // Clear stale state before repopulating (handles cancellations)
     taken.clear();
     Object.keys(bookedNames).forEach(k => delete bookedNames[k]);
@@ -1009,16 +1104,25 @@ async function loadBooked() {
         bookedNames[parseInt(id)] = info;
       });
     }
+    profile.end('loadBooked apply-state', `booked=${taken.size}`);
     if (warning) warning.style.display = 'none';
   } catch (e) {
     console.warn('Could not load booked status:', e);
+    profile.mark('loadBooked error', e.message || String(e));
     if (warning) warning.style.display = '';
   }
+  profile.start('loadBooked redraw');
   redrawSVGs();
+  profile.end('loadBooked redraw');
   updateBar();
+  profile.end('loadBooked total');
+  startupProfile.bookedLoaded = true;
+  maybeReportStartupProfile();
 }
 
+profile.start('initial redraw');
 redrawSVGs();
+profile.end('initial redraw');
 updateBar();
 loadBooked();
 </script>
