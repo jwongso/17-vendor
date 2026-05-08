@@ -1184,6 +1184,7 @@ function hideError() { document.getElementById('error-msg').classList.remove('sh
 // ── Booking submission ────────────────────────────────────────
 async function submitBooking() {
   hideError();
+  const btn = document.getElementById('btn-confirm');
 
   const nameEl      = document.getElementById('f-name');
   const stallnameEl = document.getElementById('f-stallname');
@@ -1211,36 +1212,36 @@ async function submitBooking() {
     return;
   }
 
-  const requestedBeforeRefresh = [...selected].sort((a, b) => a - b);
-  await loadBooked({ fresh: true, skipCacheHydrate: true });
-  const ids      = [...selected].sort((a, b) => a - b);
-  const lostIds  = requestedBeforeRefresh.filter(id => !selected.has(id));
-
-  if (lostIds.length) {
-    showError(`Stall #${lostIds.join(', ')} baru saja dipesan orang lain. Silakan pilih stall lain.`);
-    redrawSVGs();
-    updateBar();
-    if (selected.size === 0) closeModal();
-    else populateModalSummary();
-    return;
-  }
-
-  if (ids.length === 0) {
-    showError('Pilihan stall Anda sudah tidak tersedia. Silakan pilih stall lain.');
-    closeModal();
-    return;
-  }
-
-  const inIds    = ids.filter(id =>  isIndoor(id));
-  const outIds   = ids.filter(id => !isIndoor(id));
-  const location = inIds.length && outIds.length ? 'Indoor & Outdoor'
-                 : inIds.length ? 'Indoor' : 'Outdoor';
-
-  const btn = document.getElementById('btn-confirm');
   btn.disabled  = true;
   btn.innerHTML = '<span class="spinner"></span>Memproses...';
+  setModalChecking(true, 'Memeriksa ulang ketersediaan stall...');
 
   try {
+    const requestedBeforeRefresh = [...selected].sort((a, b) => a - b);
+    await loadBooked({ fresh: true, skipCacheHydrate: true });
+    const ids      = [...selected].sort((a, b) => a - b);
+    const lostIds  = requestedBeforeRefresh.filter(id => !selected.has(id));
+
+    if (lostIds.length) {
+      showError(`Stall #${lostIds.join(', ')} baru saja dipesan orang lain. Silakan pilih stall lain.`);
+      redrawSVGs();
+      updateBar();
+      if (selected.size === 0) closeModal();
+      else populateModalSummary();
+      return;
+    }
+
+    if (ids.length === 0) {
+      showError('Pilihan stall Anda sudah tidak tersedia. Silakan pilih stall lain.');
+      closeModal();
+      return;
+    }
+
+    const inIds    = ids.filter(id =>  isIndoor(id));
+    const outIds   = ids.filter(id => !isIndoor(id));
+    const location = inIds.length && outIds.length ? 'Indoor & Outdoor'
+                   : inIds.length ? 'Indoor' : 'Outdoor';
+
     const body = new URLSearchParams({ name, stallname, email, phone,
       booths: ids.join(', '), location, total: '$' + computeTotal() });
     if (TURNSTILE_ENABLED) body.set('cf-turnstile-response', turnstileToken);
@@ -1279,6 +1280,7 @@ async function submitBooking() {
     showError('Tidak dapat terhubung ke server. Periksa koneksi internet Anda dan coba lagi.');
     console.error('Booking error:', err);
   } finally {
+    setModalChecking(false);
     if (TURNSTILE_ENABLED) resetTurnstile();
     btn.disabled  = false;
     btn.innerHTML = 'Konfirmasi Pemesanan';
