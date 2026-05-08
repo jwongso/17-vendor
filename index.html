@@ -1012,7 +1012,7 @@ function initSVG(tab) {
     // Click handler attached to all; unavailable booths have pointer-events:none in CSS
     g.addEventListener('click', () => toggleBooth(booth.id));
 
-    // Always create a title element — text is set/cleared by updateSVG
+    // Keep a title element for truly unavailable booths; reserved booths use the info card instead.
     const titleEl = document.createElementNS('http://www.w3.org/2000/svg', 'title');
     if (booth.available === false) titleEl.textContent = booth.label || 'Tidak tersedia';
 
@@ -1048,14 +1048,9 @@ function updateSVG(tab) {
     shape.setAttribute('fill',   boothColor(booth));
     shape.setAttribute('stroke', (booth.available === false || isTaken) ? '#555' : '#222');
     g.classList.toggle('taken', isTaken);
-    // Unavailable tooltip is fixed at init; only update available booths
+    // Unavailable tooltip is fixed at init; reserved booths intentionally avoid native hover tooltips.
     if (booth.available !== false) {
-      if (isTaken) {
-        const info = bookedNames[booth.id];
-        titleEl.textContent = info ? (info.stallname || 'Sudah dipesan') : 'Sudah dipesan';
-      } else {
-        titleEl.textContent = '';
-      }
+      titleEl.textContent = '';
     }
   });
 }
