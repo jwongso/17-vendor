@@ -795,6 +795,7 @@ const ALL_BOOTHS  = [...BOOTHS.indoor, ...BOOTHS.outdoor];
 const selected    = new Set();
 const taken       = new Set();
 const bookedNames = {};   // id → { name, stallname }
+const boothNodes  = {};   // id → { g, shape, titleEl } — built once in initSVG
 
 // ── Colour helper ─────────────────────────────────────────────
 function boothColor(booth) {
@@ -805,8 +806,8 @@ function boothColor(booth) {
   return booth.type === 'ft' ? PRICE_COLOR.ft : PRICE_COLOR[booth.price];
 }
 
-// ── SVG builder ───────────────────────────────────────────────
-function buildSVG(tab) {
+// ── SVG builder — creates DOM nodes once per booth ───────────
+function initSVG(tab) {
   const svg = document.getElementById('svg-' + tab);
   svg.innerHTML = '';
 
@@ -814,10 +815,6 @@ function buildSVG(tab) {
     const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     g.classList.add('booth-group');
     if (booth.available === false) g.classList.add('unavailable');
-    else if (taken.has(booth.id)) g.classList.add('taken');
-
-    const fill   = boothColor(booth);
-    const stroke = (booth.available === false || taken.has(booth.id)) ? '#555' : '#222';
 
     let shape, lx, ly;
     if (booth.shape === 'circle') {
@@ -836,9 +833,7 @@ function buildSVG(tab) {
       lx = booth.x + booth.w / 2;
       ly = booth.y + booth.h / 2;
     }
-    shape.setAttribute('fill',         fill);
     shape.setAttribute('fill-opacity', '0.90');
-    shape.setAttribute('stroke',       stroke);
     shape.setAttribute('stroke-width', '1.5');
 
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -855,24 +850,16 @@ function buildSVG(tab) {
     text.setAttribute('pointer-events', 'none');
     text.textContent = booth.id;
 
-    if (booth.available !== false && !taken.has(booth.id)) {
-      g.addEventListener('click', () => toggleBooth(booth.id));
-    }
+    // Click handler attached to all; unavailable booths have pointer-events:none in CSS
+    g.addEventListener('click', () => toggleBooth(booth.id));
+
+    // Always create a title element — text is set/cleared by updateSVG
+    const titleEl = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    if (booth.available === false) titleEl.textContent = booth.label || 'Tidak tersedia';
 
     g.appendChild(shape);
     g.appendChild(text);
-
-    // Tooltip for taken booths or permanently unavailable
-    if (booth.available === false) {
-      const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-      title.textContent = booth.label || 'Tidak tersedia';
-      g.appendChild(title);
-    } else if (taken.has(booth.id) && bookedNames[booth.id]) {
-      const info  = bookedNames[booth.id];
-      const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-      title.textContent = info.stallname || 'Sudah dipesan';
-      g.appendChild(title);
-    }
+    g.appendChild(titleEl);
 
     // Power icon on indoor booths (all are rect, 1–18)
     if (tab === 'indoor' && booth.shape !== 'circle') {
@@ -888,10 +875,33 @@ function buildSVG(tab) {
     }
 
     svg.appendChild(g);
+    boothNodes[booth.id] = { g, shape, titleEl };
   });
 }
 
-function redrawSVGs() { buildSVG('indoor'); buildSVG('outdoor'); }
+// ── Update booth appearance in-place (no DOM create/destroy) ──
+function updateSVG(tab) {
+  BOOTHS[tab].forEach(booth => {
+    const node = boothNodes[booth.id];
+    if (!node) return;
+    const { g, shape, titleEl } = node;
+    const isTaken = taken.has(booth.id);
+    shape.setAttribute('fill',   boothColor(booth));
+    shape.setAttribute('stroke', (booth.available === false || isTaken) ? '#555' : '#222');
+    g.classList.toggle('taken', isTaken);
+    // Unavailable tooltip is fixed at init; only update available booths
+    if (booth.available !== false) {
+      if (isTaken) {
+        const info = bookedNames[booth.id];
+        titleEl.textContent = info ? (info.stallname || 'Sudah dipesan') : 'Sudah dipesan';
+      } else {
+        titleEl.textContent = '';
+      }
+    }
+  });
+}
+
+function redrawSVGs() { updateSVG('indoor'); updateSVG('outdoor'); }
 
 // ── Toggle selection ──────────────────────────────────────────
 function toggleBooth(id) {
@@ -1162,6 +1172,8 @@ async function loadBooked() {
 }
 
 profile.start('initial redraw');
+initSVG('indoor');
+initSVG('outdoor');
 redrawSVGs();
 profile.end('initial redraw');
 updateBar();
