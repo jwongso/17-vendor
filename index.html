@@ -1048,6 +1048,7 @@ async function submitBooking() {
     console.log('Booking response (HTTP', res.status, '):', JSON.stringify(data));
 
     if (data.success) {
+      localStorage.removeItem(BOOKED_CACHE_KEY); // invalidate cache after booking
       ids.forEach(id => markTaken(id));
       selected.clear();
       document.getElementById('form-view').style.display    = 'none';
@@ -1078,9 +1079,48 @@ async function submitBooking() {
 }
 
 // ── Load currently booked booths via Cloudflare proxy ───────────
+const BOOKED_CACHE_KEY = 'booked-cache-v1';
+const BOOKED_CACHE_TTL = 60000; // 60 seconds
+
+function loadBookedFromCache() {
+  try {
+    const raw = localStorage.getItem(BOOKED_CACHE_KEY);
+    if (!raw) return false;
+    const { ts, data } = JSON.parse(raw);
+    if (!ts || !data || !Array.isArray(data.booked)) return false;
+    if (Date.now() - ts > BOOKED_CACHE_TTL) return false;
+    taken.clear();
+    Object.keys(bookedNames).forEach(k => delete bookedNames[k]);
+    data.booked.forEach(id => taken.add(parseInt(id)));
+    if (data.info) {
+      Object.entries(data.info).forEach(([id, info]) => {
+        bookedNames[parseInt(id)] = info;
+      });
+    }
+    profile.mark('loadBooked cache-hit', `booked=${taken.size} age=${Date.now()-ts}ms`);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function saveBookedToCache(data) {
+  try {
+    localStorage.setItem(BOOKED_CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
+  } catch (e) { /* storage full or private mode — ignore */ }
+}
+
 async function loadBooked() {
   const warning = document.getElementById('booked-warning');
   profile.start('loadBooked total');
+
+  // Hydrate from cache immediately for instant display on repeat visits
+  const cacheHit = loadBookedFromCache();
+  if (cacheHit) {
+    redrawSVGs();
+    updateBar();
+  }
+
   try {
     profile.start('loadBooked fetch');
     const res  = await fetch('/api/booked');
@@ -1105,6 +1145,7 @@ async function loadBooked() {
       });
     }
     profile.end('loadBooked apply-state', `booked=${taken.size}`);
+    saveBookedToCache(data);
     if (warning) warning.style.display = 'none';
   } catch (e) {
     console.warn('Could not load booked status:', e);
