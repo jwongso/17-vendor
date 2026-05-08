@@ -113,6 +113,11 @@ function isSafe(s) {
   return !/^[=+\-@]/.test(String(s));
 }
 
+// Reject strings containing ASCII control characters (tab/newline/etc. allowed via trim; others blocked)
+function hasControlChars(s) {
+  return /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(String(s));
+}
+
 // Compute server-side total from validated booth IDs (ignores client-supplied value)
 function serverTotal(ids) {
   const base = ids.reduce((sum, id) => sum + (BOOTH_PRICES[id] || 0), 0);
@@ -149,6 +154,15 @@ function handleBooking(params) {
   if (!name || !stallname || !email || !phone || !booths) {
     return errResponse('Semua field wajib diisi.');
   }
+  if (name.length > 100 || stallname.length > 100) {
+    return errResponse('Nama terlalu panjang (maks 100 karakter).');
+  }
+  if (email.length > 200) {
+    return errResponse('Email terlalu panjang.');
+  }
+  if (hasControlChars(name) || hasControlChars(stallname) || hasControlChars(email)) {
+    return errResponse('Input mengandung karakter yang tidak diizinkan.');
+  }
   if (!isSafe(name) || !isSafe(stallname)) {
     return errResponse('Input mengandung karakter yang tidak diizinkan.');
   }
@@ -159,9 +173,11 @@ function handleBooking(params) {
     return errResponse('Format nomor HP tidak valid.');
   }
 
-  const requested = booths.split(',')
-    .map(s => parseInt(s.trim()))
-    .filter(n => !isNaN(n) && n >= 1 && n <= 47);
+  const requested = [...new Set(
+    booths.split(',')
+      .map(s => parseInt(s.trim(), 10))
+      .filter(n => !isNaN(n) && n >= 1 && n <= 47)
+  )];
 
   if (requested.length === 0) {
     return errResponse('Nomor stall tidak valid.');
