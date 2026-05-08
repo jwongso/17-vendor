@@ -162,9 +162,12 @@
 
     /* ── Booth info panel ───────────────────────────────────── */
     .booth-info {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 10px 16px 0;
+      position: fixed;
+      left: 16px;
+      right: 16px;
+      bottom: 82px;
+      z-index: 120;
+      pointer-events: none;
     }
     .booth-info-card[hidden] { display: none; }
     .booth-info-card {
@@ -177,6 +180,8 @@
       border-left: 4px solid #888;
       border-radius: 10px;
       padding: 12px 14px;
+      box-shadow: 0 -1px 8px rgba(0,0,0,0.12);
+      pointer-events: auto;
     }
     .booth-info-copy {
       min-width: 0;
@@ -202,6 +207,14 @@
       padding: 2px 0;
       cursor: pointer;
       flex-shrink: 0;
+    }
+    @media (min-width: 961px) {
+      .booth-info {
+        left: 50%;
+        right: auto;
+        width: min(420px, calc(100vw - 32px));
+        transform: translateX(-50%);
+      }
     }
 
     /* ── Sticky summary bar ─────────────────────────────────── */
