@@ -66,20 +66,29 @@ Low-risk implementation notes:
 - Validate shape before using cached data.
 - If cache is invalid or expired, fall back to current behavior.
 
-### 2. Reduce repeat work on the frontend
+### ✅ 2. Reduce repeat work on the frontend
+
+**Status: DONE** — committed `41d924b`
 
 Target: `index.html`
 
-Suggested change:
+Implementation:
 
-- Build each booth SVG only once.
-- Store references to the booth nodes.
-- Update booth colors, classes, and tooltips in place instead of recreating all SVG elements on every selection and every booked refresh.
+- Added `const boothNodes = {};` — registry mapping `booth.id → { g, shape, titleEl }`.
+- Renamed `buildSVG(tab)` → `initSVG(tab)`: creates all DOM nodes once (geometry, text label, title element, power icon). Stores references in `boothNodes`. Click handler attached to all booths — permanently unavailable ones already have `pointer-events: none` via CSS so clicks never fire.
+- Added `updateSVG(tab)`: loops through booths, updates only the dynamic parts in-place:
+  - `shape.setAttribute('fill', boothColor(booth))` — colour
+  - `shape.setAttribute('stroke', ...)` — stroke colour
+  - `g.classList.toggle('taken', isTaken)` — taken class
+  - `titleEl.textContent = ...` — tooltip text (empty string clears it for unbooked)
+  - Unavailable tooltip is set once in `initSVG` and never touched again.
+- `redrawSVGs()` now calls `updateSVG('indoor'); updateSVG('outdoor');` — no DOM destroy/recreate.
+- Boot sequence changed to `initSVG('indoor'); initSVG('outdoor'); redrawSVGs();`
 
 Why this helps:
 
-- Smoother interaction on mobile.
-- Less unnecessary DOM churn during startup and selection changes.
+- Smoother interaction on mobile — no DOM churn on every booth tap.
+- Less garbage collection pressure during startup and selection changes.
 
 ### ✅ 3. Add short edge caching for booked status
 
