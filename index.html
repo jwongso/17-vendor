@@ -981,7 +981,9 @@ function populateModalSummary() {
   ).join(', ');
 }
 
-function openModal() {
+async function openModal() {
+  if (selected.size === 0) return;
+  await loadBooked({ fresh: true, skipCacheHydrate: true });
   if (selected.size === 0) return;
   populateModalSummary();
   hideError();
@@ -1040,7 +1042,26 @@ async function submitBooking() {
 
   if (!valid) { showError('Harap isi semua kolom dengan benar.'); return; }
 
+  const requestedBeforeRefresh = [...selected].sort((a, b) => a - b);
+  await loadBooked({ fresh: true, skipCacheHydrate: true });
   const ids      = [...selected].sort((a, b) => a - b);
+  const lostIds  = requestedBeforeRefresh.filter(id => !selected.has(id));
+
+  if (lostIds.length) {
+    showError(`Stall #${lostIds.join(', ')} baru saja dipesan orang lain. Silakan pilih stall lain.`);
+    redrawSVGs();
+    updateBar();
+    if (selected.size === 0) closeModal();
+    else populateModalSummary();
+    return;
+  }
+
+  if (ids.length === 0) {
+    showError('Pilihan stall Anda sudah tidak tersedia. Silakan pilih stall lain.');
+    closeModal();
+    return;
+  }
+
   const inIds    = ids.filter(id =>  isIndoor(id));
   const outIds   = ids.filter(id => !isIndoor(id));
   const location = inIds.length && outIds.length ? 'Indoor & Outdoor'
@@ -1095,7 +1116,36 @@ async function submitBooking() {
 
 // ── Load currently booked booths via Cloudflare proxy ───────────
 const BOOKED_CACHE_KEY = 'booked-cache-v1';
-const BOOKED_CACHE_TTL = 60000; // 60 seconds
+const BOOKED_CACHE_TTL = 15000; // 15 seconds
+const BOOKED_POLL_MS = 10000;
+const BOOKED_WARNING_DEFAULT =
+  '⚠️ Status pemesanan gagal dimuat. Booth yang sudah dipesan mungkin tidak ditampilkan dengan benar.';
+
+let bookedLoadPromise = null;
+let bookedPollTimer = null;
+let bookedWarningTimer = null;
+
+function setBookedWarning(message, { autoHide = false } = {}) {
+  const warning = document.getElementById('booked-warning');
+  if (!warning) return;
+  clearTimeout(bookedWarningTimer);
+  warning.textContent = message;
+  warning.style.display = '';
+  if (autoHide) {
+    bookedWarningTimer = setTimeout(() => {
+      warning.textContent = BOOKED_WARNING_DEFAULT;
+      warning.style.display = 'none';
+    }, 6000);
+  }
+}
+
+function hideBookedWarning() {
+  const warning = document.getElementById('booked-warning');
+  if (!warning) return;
+  clearTimeout(bookedWarningTimer);
+  warning.textContent = BOOKED_WARNING_DEFAULT;
+  warning.style.display = 'none';
+}
 
 function loadBookedFromCache() {
   try {
@@ -1126,56 +1176,100 @@ function saveBookedToCache(data) {
 }
 
 async function loadBooked(options = {}) {
-  const { fresh = false } = options;
-  const warning = document.getElementById('booked-warning');
+  const { fresh = false, skipCacheHydrate = false } = options;
+  if (bookedLoadPromise) return bookedLoadPromise;
+
+  bookedLoadPromise = (async () => {
   profile.start('loadBooked total');
 
-  // Hydrate from cache immediately for instant display on repeat visits
-  const cacheHit = loadBookedFromCache();
-  if (cacheHit) {
+    // Hydrate from cache immediately for instant display on repeat visits
+    if (!skipCacheHydrate) {
+      const cacheHit = loadBookedFromCache();
+      if (cacheHit) {
+        redrawSVGs();
+        updateBar();
+      }
+    }
+
+    try {
+      profile.start('loadBooked fetch');
+      const res  = await fetch(fresh ? '/api/booked?fresh=1' : '/api/booked');
+      profile.end('loadBooked fetch', `status=${res.status}${fresh ? ' fresh=1' : ''}`);
+
+      profile.start('loadBooked parse-json');
+      const data = await res.json();
+      profile.end('loadBooked parse-json');
+
+      if (data.error) throw new Error(data.error);
+
+      profile.start('loadBooked apply-state');
+      // Clear stale state before repopulating (handles cancellations)
+      taken.clear();
+      Object.keys(bookedNames).forEach(k => delete bookedNames[k]);
+      if (Array.isArray(data.booked)) {
+        data.booked.forEach(id => taken.add(parseInt(id)));
+      }
+      if (data.info) {
+        Object.entries(data.info).forEach(([id, info]) => {
+          bookedNames[parseInt(id)] = info;
+        });
+      }
+
+      const displaced = [...selected].filter(id => taken.has(id)).sort((a, b) => a - b);
+      displaced.forEach(id => selected.delete(id));
+      if (displaced.length) {
+        setBookedWarning(
+          `⚠️ Stall #${displaced.join(', #')} baru saja dipesan orang lain dan telah dihapus dari pilihan Anda.`,
+          { autoHide: true }
+        );
+        if (document.getElementById('modal').classList.contains('open')) {
+          if (selected.size === 0) closeModal();
+          else populateModalSummary();
+        }
+      } else {
+        hideBookedWarning();
+      }
+
+      profile.end('loadBooked apply-state', `booked=${taken.size}`);
+      saveBookedToCache(data);
+    } catch (e) {
+      console.warn('Could not load booked status:', e);
+      profile.mark('loadBooked error', e.message || String(e));
+      setBookedWarning(BOOKED_WARNING_DEFAULT);
+    }
+    profile.start('loadBooked redraw');
     redrawSVGs();
+    profile.end('loadBooked redraw');
     updateBar();
-  }
+    profile.end('loadBooked total');
+    startupProfile.bookedLoaded = true;
+    maybeReportStartupProfile();
+  })();
 
   try {
-    profile.start('loadBooked fetch');
-    const res  = await fetch(fresh ? '/api/booked?fresh=1' : '/api/booked');
-    profile.end('loadBooked fetch', `status=${res.status}${fresh ? ' fresh=1' : ''}`);
-
-    profile.start('loadBooked parse-json');
-    const data = await res.json();
-    profile.end('loadBooked parse-json');
-
-    if (data.error) throw new Error(data.error);
-
-    profile.start('loadBooked apply-state');
-    // Clear stale state before repopulating (handles cancellations)
-    taken.clear();
-    Object.keys(bookedNames).forEach(k => delete bookedNames[k]);
-    if (Array.isArray(data.booked)) {
-      data.booked.forEach(id => taken.add(parseInt(id)));
-    }
-    if (data.info) {
-      Object.entries(data.info).forEach(([id, info]) => {
-        bookedNames[parseInt(id)] = info;
-      });
-    }
-    profile.end('loadBooked apply-state', `booked=${taken.size}`);
-    saveBookedToCache(data);
-    if (warning) warning.style.display = 'none';
-  } catch (e) {
-    console.warn('Could not load booked status:', e);
-    profile.mark('loadBooked error', e.message || String(e));
-    if (warning) warning.style.display = '';
+    await bookedLoadPromise;
+  } finally {
+    bookedLoadPromise = null;
   }
-  profile.start('loadBooked redraw');
-  redrawSVGs();
-  profile.end('loadBooked redraw');
-  updateBar();
-  profile.end('loadBooked total');
-  startupProfile.bookedLoaded = true;
-  maybeReportStartupProfile();
 }
+
+function startBookedPolling() {
+  if (bookedPollTimer) clearInterval(bookedPollTimer);
+  bookedPollTimer = setInterval(() => {
+    if (document.visibilityState !== 'visible') return;
+    loadBooked({ fresh: true, skipCacheHydrate: true });
+  }, BOOKED_POLL_MS);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    loadBooked({ fresh: true, skipCacheHydrate: true });
+  }
+});
+
+window.addEventListener('focus', () => {
+  loadBooked({ fresh: true, skipCacheHydrate: true });
+});
 
 profile.start('initial redraw');
 initSVG('indoor');
@@ -1184,6 +1278,7 @@ redrawSVGs();
 profile.end('initial redraw');
 updateBar();
 loadBooked();
+startBookedPolling();
 </script>
 </body>
 </html>
