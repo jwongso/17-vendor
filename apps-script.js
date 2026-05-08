@@ -125,9 +125,15 @@ function serverTotal(ids) {
   return Math.round(base * (1 - discount));
 }
 
-// Derive location label from booth IDs (all indoor → 'Indoor', else 'Outdoor')
+// Derive location label from booth IDs.
+// all indoor  -> 'Indoor'
+// all outdoor -> 'Outdoor'
+// mixed       -> 'Indoor & Outdoor'
 function serverLocation(ids) {
-  return ids.every(id => INDOOR_IDS.has(id)) ? 'Indoor' : 'Outdoor';
+  const hasIndoor = ids.some(id => INDOOR_IDS.has(id));
+  const hasOutdoor = ids.some(id => !INDOOR_IDS.has(id));
+  if (hasIndoor && hasOutdoor) return 'Indoor & Outdoor';
+  return hasIndoor ? 'Indoor' : 'Outdoor';
 }
 
 // Convenience: return a JSON error response
