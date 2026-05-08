@@ -42,7 +42,7 @@ function onOpen() {
 // Works even on a completely empty Registry sheet.
 // Columns: A=Booth, B=Location, C=Status, D=Name,
 //          E=Stall Name, F=Email, G=Phone, H=Timestamp
-function refreshRegistry() {
+function refreshRegistry(silent) {
   const ss             = SpreadsheetApp.getActiveSpreadsheet();
   const bookingsSheet  = ss.getSheetByName('Bookings');
   const registrySheet  = ss.getSheetByName('Registry');
@@ -78,9 +78,9 @@ function refreshRegistry() {
 
   // Write everything — columns A–H, rows 2–48
   registrySheet.getRange(2, 1, TOTAL_BOOTHS, 8).setValues(out);
-  try {
+  if (!silent) {
     SpreadsheetApp.getUi().alert('✅ Registry refreshed — ' + TOTAL_BOOTHS + ' booths updated.');
-  } catch (e) { /* called from trigger or handleBooking — no UI available */ }
+  }
 }
 
 // ── GET: list booked booths OR process a booking ──────────────
@@ -399,7 +399,7 @@ function handleBooking(params) {
     }
 
     CacheService.getScriptCache().remove(BOOKED_CACHE_KEY); // invalidate so next GET is fresh
-    refreshRegistry(); // keep Registry in sync
+    refreshRegistry(true); // keep Registry in sync, no popup
     return ContentService
       .createTextOutput(JSON.stringify({ success: true }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -412,6 +412,6 @@ function handleBooking(params) {
 // ── Auto-sync Registry on any manual edit to Bookings ─────────
 function onEdit(e) {
   if (e && e.source.getActiveSheet().getName() === SHEET_NAME) {
-    refreshRegistry();
+    refreshRegistry(true); // silent — no popup on auto-sync
   }
 }
