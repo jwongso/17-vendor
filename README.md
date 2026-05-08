@@ -116,6 +116,10 @@ Commit and push — Cloudflare Pages redeploys automatically.
 
 - Build command: `sh build.sh`
 - Output directory: `/`
+- Environment variable: `ALLOWED_ORIGINS`
+  Comma-separated list of allowed frontend origins for cross-host browser requests to `functions/api/booked.js` and `functions/api/booking.js`.
+  Example:
+  `https://bookingbooth.pages.dev,https://your-site.netlify.app,https://your-future-domain.com`
 
 ### 5a. Cloudflare Turnstile
 
@@ -156,11 +160,32 @@ Notes:
 To use this frontend on another host:
 
 1. Keep `index.html`, `config.js`, and the static assets together.
-2. Point `bookedEndpoint` and `bookingEndpoint` at your own backend URLs.
+2. Point `bookedEndpoint` and `bookingEndpoint` at your backend URLs.
 3. Re-implement the same API contract on that backend.
 4. Verify Turnstile server-side there if you enable it.
 
 The bundled `functions/api/*` files are still useful when testing this branch on Cloudflare Pages previews or production.
+
+### 5d. Netlify Frontend + Cloudflare Backend
+
+If the frontend moves to Netlify while the backend stays on Cloudflare Pages:
+
+1. Edit `config.js` before uploading the frontend.
+2. Set absolute Cloudflare API URLs, for example:
+
+```js
+window.BOOKING_CONFIG = {
+  buildHash: 'netlify',
+  bookedEndpoint: 'https://bookingbooth.pages.dev/api/booked',
+  bookingEndpoint: 'https://bookingbooth.pages.dev/api/booking',
+  turnstileSiteKey: 'YOUR_TURNSTILE_SITE_KEY'
+};
+```
+
+3. In the Cloudflare Pages project that serves the backend, set `ALLOWED_ORIGINS` to include the Netlify origin.
+4. In Turnstile hostname management, add the Netlify hostname as an allowed hostname for the widget.
+
+This lets the static frontend move hosts while the booking API remains on Cloudflare.
 
 ### 6. Test
 

@@ -1,4 +1,6 @@
 // Cloudflare Pages Function: proxy booking submission to Apps Script via GET
+import { corsHeaders, preflightResponse } from './cors.js';
+
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxBP3mXsaF39d7KE7tREkluxt9fy9GqzFeMu9eS2R5r2B4a4U_jaY0tCuCbCHKgKr7Z/exec';
 const MAX_BODY_BYTES = 4096;
 const FORWARDED_FIELDS = ['name', 'stallname', 'email', 'phone', 'booths'];
@@ -34,51 +36,47 @@ async function validateTurnstileToken(token, secret, remoteip) {
 }
 
 export async function onRequest(context) {
-  const { request } = context;
+  const { request, env } = context;
+  if (request.method === 'OPTIONS') {
+    return preflightResponse(request, env, ['POST', 'OPTIONS']);
+  }
   if (request.method !== 'POST') {
     return new Response('Method Not Allowed', { status: 405 });
   }
 
   const origin = request.headers.get('origin');
-  if (origin) {
-    try {
-      const originUrl = new URL(origin);
-      const requestUrl = new URL(request.url);
-      if (originUrl.host !== requestUrl.host) {
-        return jsonResponse({ success: false, error: 'Forbidden origin' }, { status: 403 });
-      }
-    } catch {
-      return jsonResponse({ success: false, error: 'Invalid origin' }, { status: 403 });
-    }
+  const { policy, headers } = corsHeaders(origin, request.url, env, ['POST', 'OPTIONS']);
+  if (!policy.allowed) {
+    return jsonResponse({ success: false, error: policy.reason }, { status: 403 });
   }
 
   const contentType = request.headers.get('content-type') || '';
   if (!contentType.startsWith('application/x-www-form-urlencoded')) {
-    return jsonResponse(
-      { success: false, error: 'Unsupported content type' },
-      { status: 415 }
-    );
-  }
+      return jsonResponse(
+        { success: false, error: 'Unsupported content type' },
+        { status: 415, headers }
+      );
+    }
 
   try {
     const headerLength = Number.parseInt(request.headers.get('content-length') || '', 10);
     if (Number.isFinite(headerLength) && headerLength > MAX_BODY_BYTES) {
-      return jsonResponse({ success: false, error: 'Payload too large' }, { status: 413 });
+      return jsonResponse({ success: false, error: 'Payload too large' }, { status: 413, headers });
     }
 
     const body = await request.text();
     if (body.length > MAX_BODY_BYTES) {
-      return jsonResponse({ success: false, error: 'Payload too large' }, { status: 413 });
+      return jsonResponse({ success: false, error: 'Payload too large' }, { status: 413, headers });
     }
 
     const incoming = new URLSearchParams(body);
-    const turnstileSecret = context.env && context.env.TURNSTILE_SECRET_KEY;
+    const turnstileSecret = env && env.TURNSTILE_SECRET_KEY;
     if (turnstileSecret) {
       const turnstileToken = incoming.get('cf-turnstile-response') || '';
       if (!turnstileToken) {
         return jsonResponse(
           { success: false, error: 'Selesaikan verifikasi keamanan lalu coba lagi.' },
-          { status: 400 }
+          { status: 400, headers }
         );
       }
 
@@ -93,7 +91,7 @@ export async function onRequest(context) {
             error: 'Verifikasi keamanan gagal. Silakan coba lagi.',
             turnstileErrorCodes: validation['error-codes'] || []
           },
-          { status: 403 }
+          { status: 403, headers }
         );
       }
     }
@@ -115,12 +113,12 @@ export async function onRequest(context) {
     } catch {
       return jsonResponse(
         { success: false, error: 'Bad response from Apps Script' },
-        { status: 502 }
+        { status: 502, headers }
       );
     }
 
-    return jsonResponse(data);
+    return jsonResponse(data, { headers });
   } catch (err) {
-    return jsonResponse({ success: false, error: err.message }, { status: 500 });
+    return jsonResponse({ success: false, error: err.message }, { status: 500, headers });
   }
 }

@@ -1,4 +1,6 @@
 // Cloudflare Pages Function: proxy GET booked list from Apps Script
+import { corsHeaders, preflightResponse } from './cors.js';
+
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxBP3mXsaF39d7KE7tREkluxt9fy9GqzFeMu9eS2R5r2B4a4U_jaY0tCuCbCHKgKr7Z/exec';
 
 const SECURITY_HEADERS = {
@@ -7,7 +9,21 @@ const SECURITY_HEADERS = {
 };
 
 export async function onRequest(context) {
-  const url = new URL(context.request.url);
+  const { request, env } = context;
+  if (request.method === 'OPTIONS') {
+    return preflightResponse(request, env, ['GET', 'OPTIONS']);
+  }
+  if (request.method !== 'GET') {
+    return new Response('Method Not Allowed', { status: 405 });
+  }
+
+  const origin = request.headers.get('origin');
+  const { policy, headers } = corsHeaders(origin, request.url, env, ['GET', 'OPTIONS']);
+  if (!policy.allowed) {
+    return new Response(policy.reason, { status: 403 });
+  }
+
+  const url = new URL(request.url);
   const fresh = url.searchParams.get('fresh') === '1';
 
   try {
@@ -16,6 +32,7 @@ export async function onRequest(context) {
     const data = await res.json();
     return Response.json(data, {
       headers: {
+        ...Object.fromEntries(headers || []),
         ...SECURITY_HEADERS,
         'Cache-Control': fresh
           ? 'no-store'
@@ -25,7 +42,14 @@ export async function onRequest(context) {
   } catch (err) {
     return Response.json(
       { error: 'Gagal memuat data pemesanan.' },
-      { status: 503, headers: { ...SECURITY_HEADERS, 'Cache-Control': 'no-store' } }
+      {
+        status: 503,
+        headers: {
+          ...Object.fromEntries(headers || []),
+          ...SECURITY_HEADERS,
+          'Cache-Control': 'no-store'
+        }
+      }
     );
   }
 }
