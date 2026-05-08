@@ -2,6 +2,7 @@
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxBP3mXsaF39d7KE7tREkluxt9fy9GqzFeMu9eS2R5r2B4a4U_jaY0tCuCbCHKgKr7Z/exec';
 const MAX_BODY_BYTES = 4096;
 const FORWARDED_FIELDS = ['name', 'stallname', 'email', 'phone', 'booths'];
+const TURNSTILE_VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 
 function jsonResponse(body, init = {}) {
   const headers = new Headers(init.headers || {});
@@ -9,6 +10,27 @@ function jsonResponse(body, init = {}) {
   headers.set('X-Content-Type-Options', 'nosniff');
   headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   return Response.json(body, { ...init, headers });
+}
+
+async function validateTurnstileToken(token, secret, remoteip) {
+  const payload = new URLSearchParams();
+  payload.set('secret', secret);
+  payload.set('response', token);
+  payload.set('idempotency_key', crypto.randomUUID());
+  if (remoteip) payload.set('remoteip', remoteip);
+
+  try {
+    const response = await fetch(TURNSTILE_VERIFY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: payload.toString()
+    });
+    const result = await response.json();
+    if (!response.ok) return { success: false, 'error-codes': ['internal-error'] };
+    return result;
+  } catch {
+    return { success: false, 'error-codes': ['internal-error'] };
+  }
 }
 
 export async function onRequest(context) {
@@ -50,6 +72,32 @@ export async function onRequest(context) {
     }
 
     const incoming = new URLSearchParams(body);
+    const turnstileSecret = context.env && context.env.TURNSTILE_SECRET_KEY;
+    if (turnstileSecret) {
+      const turnstileToken = incoming.get('cf-turnstile-response') || '';
+      if (!turnstileToken) {
+        return jsonResponse(
+          { success: false, error: 'Selesaikan verifikasi keamanan lalu coba lagi.' },
+          { status: 400 }
+        );
+      }
+
+      const remoteip = request.headers.get('CF-Connecting-IP')
+        || request.headers.get('X-Forwarded-For')
+        || '';
+      const validation = await validateTurnstileToken(turnstileToken, turnstileSecret, remoteip);
+      if (!validation.success) {
+        return jsonResponse(
+          {
+            success: false,
+            error: 'Verifikasi keamanan gagal. Silakan coba lagi.',
+            turnstileErrorCodes: validation['error-codes'] || []
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     const params = new URLSearchParams();
     params.set('action', 'book');
     FORWARDED_FIELDS.forEach((field) => {

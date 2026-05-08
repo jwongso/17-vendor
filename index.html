@@ -301,6 +301,23 @@
     .form-group input:focus { border-color: var(--red); }
     .form-group input.field-error { border-color: #e00; }
     .required { color: var(--red); }
+    .turnstile-box[hidden] { display: none; }
+    .turnstile-box {
+      margin: 14px 0 12px;
+      padding: 10px;
+      border: 1px solid #eee;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+    .turnstile-box .turnstile-note {
+      font-size: 0.78rem;
+      color: #666;
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+    #turnstile-widget {
+      min-height: 65px;
+    }
 
     /* Modal actions */
     .form-actions { display: flex; gap: 10px; margin-top: 18px; }
@@ -573,6 +590,11 @@
         <input type="tel" id="f-phone" placeholder="08xxxxxxxxxx" autocomplete="tel">
       </div>
 
+      <div class="turnstile-box" id="turnstile-box" hidden>
+        <div class="turnstile-note">Selesaikan verifikasi keamanan sebelum mengirim pemesanan.</div>
+        <div id="turnstile-widget"></div>
+      </div>
+
       <div class="form-group" style="display:flex;align-items:flex-start;gap:10px;">
         <input type="checkbox" id="f-agree"
           style="width:auto;margin-top:3px;accent-color:var(--red);flex-shrink:0;"
@@ -651,8 +673,16 @@ Tenda 3m x 3m</li>
   <p>&copy; 2026 <strong>KKIA 17an</strong>. All rights reserved.</p>
 </footer>
 
+<script defer src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad"></script>
 <script>
 console.log('Build: __HASH__');
+
+const TURNSTILE_SITE_KEY = '__TURNSTILE_SITE_KEY__'.trim();
+const TURNSTILE_ENABLED = !!TURNSTILE_SITE_KEY && !TURNSTILE_SITE_KEY.includes('__TURNSTILE');
+
+let turnstileWidgetId = null;
+let turnstileToken = '';
+let turnstileLoadError = false;
 
 const profile = (() => {
   const prefix = '[BoothProfile]';
@@ -981,10 +1011,68 @@ function populateModalSummary() {
   ).join(', ');
 }
 
+function handleTurnstileSuccess(token) {
+  turnstileToken = token;
+  hideError();
+  toggleConfirmBtn();
+}
+
+function handleTurnstileExpired() {
+  turnstileToken = '';
+  toggleConfirmBtn();
+}
+
+function handleTurnstileError() {
+  turnstileToken = '';
+  turnstileLoadError = true;
+  toggleConfirmBtn();
+}
+
+function ensureTurnstileWidget() {
+  const box = document.getElementById('turnstile-box');
+  const widget = document.getElementById('turnstile-widget');
+  if (!box || !widget) return false;
+  if (!TURNSTILE_ENABLED) {
+    box.hidden = true;
+    return false;
+  }
+
+  box.hidden = false;
+  if (!window.turnstile || turnstileWidgetId !== null) return !!window.turnstile;
+
+  widget.innerHTML = '';
+  turnstileLoadError = false;
+  turnstileWidgetId = window.turnstile.render('#turnstile-widget', {
+    sitekey: TURNSTILE_SITE_KEY,
+    theme: 'light',
+    size: 'flexible',
+    callback: handleTurnstileSuccess,
+    'expired-callback': handleTurnstileExpired,
+    'error-callback': handleTurnstileError
+  });
+  return true;
+}
+
+function resetTurnstile() {
+  turnstileToken = '';
+  turnstileLoadError = false;
+  if (TURNSTILE_ENABLED && window.turnstile && turnstileWidgetId !== null) {
+    window.turnstile.reset(turnstileWidgetId);
+  }
+  toggleConfirmBtn();
+}
+
+window.onTurnstileLoad = () => {
+  ensureTurnstileWidget();
+  toggleConfirmBtn();
+};
+
 async function openModal() {
   if (selected.size === 0) return;
   await loadBooked({ fresh: true, skipCacheHydrate: true });
   if (selected.size === 0) return;
+  ensureTurnstileWidget();
+  resetTurnstile();
   populateModalSummary();
   hideError();
   document.getElementById('form-view').style.display    = '';
@@ -993,7 +1081,9 @@ async function openModal() {
 }
 
 function toggleConfirmBtn() {
-  document.getElementById('btn-confirm').disabled = !document.getElementById('f-agree').checked;
+  const agreed = document.getElementById('f-agree').checked;
+  const verified = !TURNSTILE_ENABLED || !!turnstileToken;
+  document.getElementById('btn-confirm').disabled = !(agreed && verified);
 }
 
 function closeModal() {
@@ -1004,6 +1094,7 @@ function closeModal() {
     el.classList.remove('field-error');
   });
   document.getElementById('f-agree').checked = false;
+  resetTurnstile();
   document.getElementById('btn-confirm').disabled = true;
 }
 
@@ -1041,6 +1132,12 @@ async function submitBooking() {
   if (!phone || !/^[\d\s\+\-\(\)]{5,20}$/.test(phone))    { phoneEl.classList.add('field-error'); valid = false; }
 
   if (!valid) { showError('Harap isi semua kolom dengan benar.'); return; }
+  if (TURNSTILE_ENABLED && !turnstileToken) {
+    showError(turnstileLoadError
+      ? 'Verifikasi keamanan gagal dimuat. Muat ulang halaman atau coba lagi beberapa saat.'
+      : 'Selesaikan verifikasi keamanan terlebih dahulu.');
+    return;
+  }
 
   const requestedBeforeRefresh = [...selected].sort((a, b) => a - b);
   await loadBooked({ fresh: true, skipCacheHydrate: true });
@@ -1074,6 +1171,7 @@ async function submitBooking() {
   try {
     const body = new URLSearchParams({ name, stallname, email, phone,
       booths: ids.join(', '), location, total: '$' + computeTotal() });
+    if (TURNSTILE_ENABLED) body.set('cf-turnstile-response', turnstileToken);
 
     const res  = await fetch('/api/booking', {
       method: 'POST',
@@ -1109,8 +1207,10 @@ async function submitBooking() {
     showError('Tidak dapat terhubung ke server. Periksa koneksi internet Anda dan coba lagi.');
     console.error('Booking error:', err);
   } finally {
+    if (TURNSTILE_ENABLED) resetTurnstile();
     btn.disabled  = false;
     btn.innerHTML = 'Konfirmasi Pemesanan';
+    toggleConfirmBtn();
   }
 }
 

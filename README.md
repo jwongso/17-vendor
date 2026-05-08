@@ -13,7 +13,7 @@ Live: https://bookingbooth.pages.dev
 | `index.html` | Complete UI — single file, no framework |
 | `apps-script.js` | Google Apps Script backend — paste into Apps Script editor and deploy |
 | `functions/api/booked.js` | Cloudflare Pages Function: proxy GET booked list |
-| `functions/api/booking.js` | Cloudflare Pages Function: proxy POST booking |
+| `functions/api/booking.js` | Cloudflare Pages Function: proxy POST booking + optional Turnstile verification |
 | `build.sh` | Injects git commit hash (`$CF_PAGES_COMMIT_SHA`) into index.html at deploy |
 | `indoor.jpeg` | Indoor floor plan (1065×654 px); booths 1–18 |
 | `outdoor.jpeg` | Outdoor floor plan (1065×653 px); booths 19–47 |
@@ -97,6 +97,20 @@ Commit and push — Cloudflare Pages redeploys automatically.
 - Build command: `sh build.sh`
 - Output directory: `/`
 
+### 5a. Optional: Cloudflare Turnstile
+
+If you want bot protection on booking submissions, create a Turnstile widget in Cloudflare and configure these variables in your Pages project:
+
+- `TURNSTILE_SITE_KEY`
+  Public site key. Exposed to the browser and injected into `index.html` during build.
+- `TURNSTILE_SECRET_KEY`
+  Secret key. Kept server-side and used only by `functions/api/booking.js` to call Turnstile Siteverify.
+
+Behavior:
+
+- If both keys are configured correctly, booking submission requires a valid Turnstile token.
+- If `TURNSTILE_SECRET_KEY` is not configured, booking continues to work without Turnstile enforcement.
+
 ### 6. Test
 
 ```sh
@@ -107,6 +121,8 @@ sh tests/test-stress.sh       # stress test
 ```
 
 After each test run, set test booth rows to `Cancelled` in the sheet.
+
+If Turnstile enforcement is enabled in production, these test scripts will need to be updated to send a valid `cf-turnstile-response` token or they will fail with security verification errors.
 
 ---
 
