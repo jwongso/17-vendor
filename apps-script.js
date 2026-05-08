@@ -325,7 +325,7 @@ function handleBooking(params) {
       console.error('Coordinator email failed:', mailErr.message);
     }
 
-    CacheService.getScriptCache().remove('booked_v1'); // invalidate so next GET is fresh
+    CacheService.getScriptCache().remove(BOOKED_CACHE_KEY); // invalidate so next GET is fresh
     return ContentService
       .createTextOutput(JSON.stringify({ success: true }))
       .setMimeType(ContentService.MimeType.JSON);
