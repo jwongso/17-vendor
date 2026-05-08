@@ -190,18 +190,16 @@ Implementation:
   - column I (status)
 - Edge case handled: `lastRow < 2` (empty sheet) returns `{ booked: [], info: {} }` and caches it.
 
-### 6. Preload the first visible floor-plan image
+### ✅ 6. Preload the first visible floor-plan image
+
+**Status: DONE** — committed `45c151b`
 
 Target: `index.html`
 
-Suggested change:
+Implementation:
 
-- Add preload for the indoor map image because that tab is shown first.
-- Optionally prefetch the outdoor image.
-
-Why this helps:
-
-- Faster perceived startup, especially on mobile or slower connections.
+- Added `<link rel="preload" as="image" href="Indoor.jpg">` — browser fetches the indoor map in parallel with CSS/JS during page load.
+- Added `<link rel="prefetch" href="Outdoor.jpg">` — browser fetches the outdoor map in idle time, ready when the user switches tabs.
 
 ## Security hardening
 
@@ -231,23 +229,18 @@ Implementation:
 - Added `FORWARDED_FIELDS = ['name', 'stallname', 'email', 'phone', 'booths']` allowlist; only those fields are forwarded upstream — all other fields are silently dropped.
 - Added `jsonResponse()` helper that adds `Cache-Control: no-store` and security headers to all responses.
 
-### 9. Keep server-side validation authoritative
+### ✅ 9. Keep server-side validation authoritative
+
+**Status: DONE** — committed `1c18b6e`
 
 Target: `apps-script.js`
 
-Suggested change:
+Implementation:
 
-- Continue ignoring client-provided `location` and `total`.
-- Also:
-  - deduplicate booth IDs server-side
-  - enforce max field lengths
-  - reject control characters
-  - normalize booth number formatting before writing to Sheets
-
-Why this helps:
-
-- Prevents malformed data from being stored.
-- Makes the sheet more reliable over time.
+- Added `hasControlChars(s)`: rejects strings containing ASCII control characters `\x00–\x08`, `\x0B`, `\x0C`, `\x0E–\x1F`, `\x7F`. Applied to `name`, `stallname`, `email`.
+- Added max length checks: `name` and `stallname` ≤ 100 chars; `email` ≤ 200 chars.
+- Booth IDs deduplicated with `[...new Set(...)]` after parsing — prevents a client sending `"5,5,5"` to inflate pricing or conflict checks.
+- Booth parse now uses explicit radix `parseInt(s.trim(), 10)`.
 
 ### ✅ 10. Add basic response security headers
 
@@ -318,9 +311,11 @@ Fixed in `booking.js`: PII logging removed; field allowlist, content-type check,
 
 ⏳ Still pending: `booked.js` missing `X-Content-Type-Options` / `Referrer-Policy` headers (item 10 follow-up).
 
-## Remaining open items
+## ✅ All items complete
 
-1. **Item 6** — Preload `Indoor.jpg` (`<link rel="preload">` in `index.html`)
-2. **Item 9** — Apps Script extra hardening: dedup booth IDs server-side, enforce max field lengths, reject control characters beyond the `isSafe()` prefix check
-3. **Item 10 follow-up** — Add security headers to `booked.js`
-4. **Cleanup** — Line 328 in `apps-script.js` uses hardcoded `'booked_v1'` instead of `BOOKED_CACHE_KEY` constant
+- **Item 6** (`45c151b`): `Indoor.jpg` preloaded; `Outdoor.jpg` prefetched.
+- **Item 9** (`1c18b6e`): Booth dedup, max field lengths (name/stallname ≤ 100, email ≤ 200), control character rejection.
+- **Item 10 follow-up** (`0c55a1b`): `booked.js` now adds `X-Content-Type-Options` and `Referrer-Policy` on all responses.
+- **Cleanup** (`27337d5`): `apps-script.js` line 328 uses `BOOKED_CACHE_KEY` constant.
+
+⚠️ **Please redeploy `apps-script.js`** — commits `1c18b6e` and `27337d5` changed the script.
