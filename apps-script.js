@@ -50,27 +50,47 @@ function doGet(e) {
 }
 
 function getBooked() {
+  const cache     = CacheService.getScriptCache();
+  const cacheKey  = 'booked_v1';
+  const cached    = cache.get(cacheKey);
+  if (cached) {
+    return ContentService
+      .createTextOutput(cached)
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-  const rows  = sheet.getDataRange().getDisplayValues(); // avoids Date auto-conversion
+  // Read only columns E, F, I (stallname, booths, status) — avoids full row scan
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    const empty = JSON.stringify({ booked: [], info: {} });
+    cache.put(cacheKey, empty, 30);
+    return ContentService.createTextOutput(empty).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const colE = sheet.getRange(2, 5, lastRow - 1, 1).getDisplayValues(); // stallname
+  const colF = sheet.getRange(2, 6, lastRow - 1, 1).getDisplayValues(); // booths
+  const colI = sheet.getRange(2, 9, lastRow - 1, 1).getDisplayValues(); // status
 
   const booked = [];
   const info   = {};
-  for (let i = 1; i < rows.length; i++) {
-    const status = rows[i][8]; // column I (Status)
-    if (String(status).trim().toLowerCase() === 'cancelled') continue;
-    String(rows[i][5]).split(',').forEach(s => { // column F (Booths)
+  for (let i = 0; i < colF.length; i++) {
+    if (String(colI[i][0]).trim().toLowerCase() === 'cancelled') continue;
+    String(colF[i][0]).split(',').forEach(s => {
       const n = parseInt(s.trim());
       if (!isNaN(n)) {
         booked.push(n);
         if (!info[n]) {
-          info[n] = { stallname: rows[i][4] }; // col E only — no vendor name (PII)
+          info[n] = { stallname: colE[i][0] }; // col E only — no vendor name (PII)
         }
       }
     });
   }
 
+  const result = JSON.stringify({ booked, info });
+  cache.put(cacheKey, result, 30); // cache for 30 seconds
   return ContentService
-    .createTextOutput(JSON.stringify({ booked, info }))
+    .createTextOutput(result)
     .setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -297,6 +317,7 @@ function handleBooking(params) {
       console.error('Coordinator email failed:', mailErr.message);
     }
 
+    CacheService.getScriptCache().remove('booked_v1'); // invalidate so next GET is fresh
     return ContentService
       .createTextOutput(JSON.stringify({ success: true }))
       .setMimeType(ContentService.MimeType.JSON);
