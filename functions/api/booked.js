@@ -6,7 +6,7 @@ export async function onRequest() {
     const res  = await fetch(APPS_SCRIPT_URL, { redirect: 'follow' });
     const data = await res.json();
     return Response.json(data, {
-      headers: { 'Cache-Control': 'no-store' }
+      headers: { 'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=30' }
     });
   } catch (err) {
     return Response.json(
