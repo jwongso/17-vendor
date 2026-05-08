@@ -18,8 +18,8 @@ Live: https://bookingbooth.pages.dev
 | `functions/api/booked.js` | Cloudflare Pages Function: proxy GET booked list |
 | `functions/api/booking.js` | Cloudflare Pages Function: proxy POST booking + Turnstile verification |
 | `build.sh` | Injects git commit hash (`$CF_PAGES_COMMIT_SHA`) and `TURNSTILE_SITE_KEY` into `config.js` at deploy |
-| `indoor.jpeg` | Indoor floor plan (1065×654 px); booths 1–18 |
-| `outdoor.jpeg` | Outdoor floor plan (1065×653 px); booths 19–47 |
+| `Indoor.jpg` | Indoor floor plan image used by the live page; booths 1–18 |
+| `Outdoor.jpg` | Outdoor floor plan image used by the live page; booths 19–47 |
 | `tests/` | Integration tests (sequential, concurrent, validation, stress) |
 
 ---
