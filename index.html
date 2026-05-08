@@ -683,6 +683,14 @@ const TURNSTILE_ENABLED = !!TURNSTILE_SITE_KEY && !TURNSTILE_SITE_KEY.includes('
 let turnstileWidgetId = null;
 let turnstileToken = '';
 let turnstileLoadError = false;
+const PROFILE_ENABLED = (() => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('profile') === '1' || localStorage.getItem('booking-profile') === '1';
+  } catch {
+    return false;
+  }
+})();
 
 const profile = (() => {
   const prefix = '[BoothProfile]';
@@ -700,7 +708,7 @@ const profile = (() => {
 
   function start(name, detail) {
     openMarks.set(name, performance.now());
-    console.debug(`${prefix} start ${name}`, detail || '');
+    if (PROFILE_ENABLED) console.debug(`${prefix} start ${name}`, detail || '');
   }
 
   function end(name, detail) {
@@ -714,7 +722,7 @@ const profile = (() => {
       since_start_ms: sinceStart(),
       detail: detail || ''
     });
-    console.debug(`${prefix} end ${name}: ${duration}ms`, detail || '');
+    if (PROFILE_ENABLED) console.debug(`${prefix} end ${name}: ${duration}ms`, detail || '');
   }
 
   function mark(name, detail) {
@@ -724,10 +732,11 @@ const profile = (() => {
       since_start_ms: sinceStart(),
       detail: detail || ''
     });
-    console.debug(`${prefix} mark ${name} @ ${sinceStart()}ms`, detail || '');
+    if (PROFILE_ENABLED) console.debug(`${prefix} mark ${name} @ ${sinceStart()}ms`, detail || '');
   }
 
   function report(label) {
+    if (!PROFILE_ENABLED) return;
     const nav = performance.getEntriesByType('navigation')[0];
     console.groupCollapsed(`${prefix} ${label}`);
     if (nav) {
