@@ -78,7 +78,9 @@ function refreshRegistry() {
 
   // Write everything — columns A–H, rows 2–48
   registrySheet.getRange(2, 1, TOTAL_BOOTHS, 8).setValues(out);
-  SpreadsheetApp.getUi().alert('✅ Registry refreshed — ' + TOTAL_BOOTHS + ' booths updated.');
+  try {
+    SpreadsheetApp.getUi().alert('✅ Registry refreshed — ' + TOTAL_BOOTHS + ' booths updated.');
+  } catch (e) { /* called from trigger or handleBooking — no UI available */ }
 }
 
 // ── GET: list booked booths OR process a booking ──────────────
@@ -397,11 +399,19 @@ function handleBooking(params) {
     }
 
     CacheService.getScriptCache().remove(BOOKED_CACHE_KEY); // invalidate so next GET is fresh
+    refreshRegistry(); // keep Registry in sync
     return ContentService
       .createTextOutput(JSON.stringify({ success: true }))
       .setMimeType(ContentService.MimeType.JSON);
 
   } finally {
     lock.releaseLock(); // always release, even if an error occurs above
+  }
+}
+
+// ── Auto-sync Registry on any manual edit to Bookings ─────────
+function onEdit(e) {
+  if (e && e.source.getActiveSheet().getName() === SHEET_NAME) {
+    refreshRegistry();
   }
 }
