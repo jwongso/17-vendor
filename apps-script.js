@@ -30,6 +30,60 @@ const INDOOR_IDS = new Set([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]);
 function onOpen() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
   if (sheet) sheet.getRange('F:F').setNumberFormat('@');
+
+  SpreadsheetApp.getUi()
+    .createMenu('Booth Admin')
+    .addItem('🔄 Refresh Registry', 'refreshRegistry')
+    .addToUi();
+}
+
+// ── Refresh Registry sheet from Bookings ──────────────────────
+// Registry columns: A=Booth, B=Location, C=Status, D=Name,
+//                   E=Stall Name, F=Email, G=Phone, H=Timestamp
+// Run manually via Booth Admin menu, or call after a booking write.
+function refreshRegistry() {
+  const ss             = SpreadsheetApp.getActiveSpreadsheet();
+  const bookingsSheet  = ss.getSheetByName('Bookings');
+  const registrySheet  = ss.getSheetByName('Registry');
+
+  if (!bookingsSheet || !registrySheet) {
+    SpreadsheetApp.getUi().alert('Sheet not found: Bookings or Registry');
+    return;
+  }
+
+  // Build map: boothNum → 0-based row index in Registry data range
+  const regLastRow = registrySheet.getLastRow();
+  if (regLastRow < 2) return;
+  const regRows    = regLastRow - 1;
+  const regBooths  = registrySheet.getRange(2, 1, regRows, 1).getValues();
+  const boothRowMap = {};
+  for (let i = 0; i < regBooths.length; i++) {
+    const n = parseInt(regBooths[i][0], 10);
+    if (!isNaN(n)) boothRowMap[n] = i;
+  }
+
+  // Initialise output: [Status, Name, StallName, Email, Phone, Timestamp]
+  const out = Array.from({ length: regRows }, () => ['Available', '', '', '', '', '']);
+
+  // Read all active bookings
+  const bookLastRow = bookingsSheet.getLastRow();
+  if (bookLastRow >= 2) {
+    const data = bookingsSheet.getRange(2, 1, bookLastRow - 1, 9).getDisplayValues();
+    // Columns: [0]Timestamp [1]Name [2]Email [3]Phone [4]StallName [5]Booths [8]Status
+    for (const row of data) {
+      if (String(row[8]).trim().toLowerCase() === 'cancelled') continue;
+      const [timestamp, name, email, phone, stallname, boothsStr] = row;
+      String(boothsStr).split(',').forEach(s => {
+        const n = parseInt(s.trim(), 10);
+        if (isNaN(n) || boothRowMap[n] === undefined) return;
+        out[boothRowMap[n]] = ['Booked', name, stallname, email, phone, timestamp];
+      });
+    }
+  }
+
+  // Write all at once to columns C–H
+  registrySheet.getRange(2, 3, regRows, 6).setValues(out);
+  SpreadsheetApp.getUi().alert('✅ Registry refreshed — ' + regRows + ' booths updated.');
 }
 
 // ── GET: list booked booths OR process a booking ──────────────
