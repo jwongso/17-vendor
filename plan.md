@@ -4,12 +4,12 @@
 
 ```
 script-start        0.2ms
-initial redraw      4.4ms   ← SVG render, very fast
+initial redraw      4.4ms   <- SVG render, very fast
 dom-content-loaded  6.7ms
 window-load       295.2ms
-loadBooked fetch  3470.5ms  ← entire delay was here
+loadBooked fetch  3470.5ms  <- entire delay was here
 loadBooked total  3478.9ms
-startup-complete  3484.0ms  ← user saw uncoloured booths for 3.5 seconds
+startup-complete  3484.0ms  <- user saw uncoloured booths for 3.5 seconds
 ```
 
 ## Measured results after all optimisations (2026-05-08)
@@ -23,7 +23,56 @@ startup-complete  3484.0ms  ← user saw uncoloured booths for 3.5 seconds
 
 ---
 
-## Main startup bottleneck (resolved)
+## Latest verification from browser console (2026-05-08, user-provided)
+
+### Run A: "First boot"
+
+```
+script-start         0.2ms
+initial redraw       2.5ms
+loadBooked cache-hit 4.3ms   <- booked booths were already shown from localStorage
+dom-content-loaded  23.0ms
+window-load         28.6ms
+loadBooked fetch  2779.4ms   <- backend/network path still slow on this request
+loadBooked total  2781.7ms
+startup-complete  2785.3ms
+```
+
+Notes:
+
+- This was **not a true cold first visit**, because `loadBooked cache-hit` fired and the cache age was `40052ms`.
+- User-visible booth colouring was already fast.
+- The remaining slow part was still the background `/api/booked` fetch.
+
+### Run B: second refresh
+
+```
+script-start         0.0ms
+initial redraw       1.0ms
+loadBooked cache-hit 1.5ms
+dom-content-loaded   2.3ms
+loadBooked fetch     3.9ms
+loadBooked total     5.2ms
+window-load         22.7ms
+startup-complete    22.7ms
+```
+
+Notes:
+
+- Repeat-visit user experience is now very good.
+- Reserved booths become visible almost immediately from `localStorage`.
+- Warm `/api/booked` fetch is now effectively negligible.
+
+### Findings from these numbers
+
+- Frontend rendering is not the bottleneck.
+- The optimisation work succeeded for repeat visits and refreshes.
+- The remaining slow path is the **cold upstream fetch** (`browser -> Cloudflare -> Apps Script -> Google Sheets`).
+- To measure a true cold first visit, clear `localStorage` or use a private window before testing.
+
+---
+
+## Main startup bottleneck (partially resolved)
 
 The slow part was not the booth SVG itself. The visible delay came from the path used to mark reserved booths:
 
@@ -33,6 +82,12 @@ The slow part was not the booth SVG itself. The visible delay came from the path
 - `functions/api/booked.js` returned `Cache-Control: no-store`.
 - `apps-script.js:getBooked()` read the whole sheet with `getDataRange().getDisplayValues()`.
 - `index.html` rebuilt the SVG again after booked data arrived.
+
+Current status:
+
+- **Resolved for repeat visitors**: cached booked booths appear in ~1ms to ~7ms.
+- **Resolved for warm edge hits**: `/api/booked` can return in ~4ms to ~17ms.
+- **Not fully resolved for cold backend fetches**: one measured request still took `2779.4ms`.
 
 ---
 
@@ -52,7 +107,7 @@ Implementation:
 - In `loadBooked()`: call `loadBookedFromCache()` first; if hit, immediately call `redrawSVGs()` + `updateBar()` before the fetch even starts.
 - After successful fetch: call `saveBookedToCache(data)` to update the cache.
 - In `submitBooking()` on `data.success`: call `localStorage.removeItem(BOOKED_CACHE_KEY)` to invalidate so the next load gets fresh data.
-- Profiling confirmed: `cache-hit` fires at 6.9ms; booked booths coloured before network responds.
+- Profiling confirmed: `cache-hit` fires in single-digit milliseconds; booked booths are coloured before network responds.
 - Still call `/api/booked` in the background and refresh the UI when the latest data arrives.
 
 Why this helps:
@@ -74,8 +129,8 @@ Target: `index.html`
 
 Implementation:
 
-- Added `const boothNodes = {};` — registry mapping `booth.id → { g, shape, titleEl }`.
-- Renamed `buildSVG(tab)` → `initSVG(tab)`: creates all DOM nodes once (geometry, text label, title element, power icon). Stores references in `boothNodes`. Click handler attached to all booths — permanently unavailable ones already have `pointer-events: none` via CSS so clicks never fire.
+- Added `const boothNodes = {};` — registry mapping `booth.id -> { g, shape, titleEl }`.
+- Renamed `buildSVG(tab)` -> `initSVG(tab)`: creates all DOM nodes once (geometry, text label, title element, power icon). Stores references in `boothNodes`. Click handler attached to all booths — permanently unavailable ones already have `pointer-events: none` via CSS so clicks never fire.
 - Added `updateSVG(tab)`: loops through booths, updates only the dynamic parts in-place:
   - `shape.setAttribute('fill', boothColor(booth))` — colour
   - `shape.setAttribute('stroke', ...)` — stroke colour
@@ -102,7 +157,7 @@ Implementation:
 - Cloudflare serves cached response (15s max-age) to all visitors at the same edge node.
 - `stale-while-revalidate=30` means Cloudflare revalidates in the background; visitors never block on a cache miss.
 - The server-side conflict check in `handleBooking()` is unaffected — a stale display window is safe.
-- Profiling confirmed: `loadBooked fetch` dropped to **17ms** on warm CDN hit.
+- Profiling confirmed: `loadBooked fetch` dropped to single-digit or low double-digit milliseconds on warm hits.
 
 ### ✅ 4. Cache booked data inside Apps Script
 
@@ -114,8 +169,12 @@ Implementation:
 
 - At the top of `getBooked()`: call `CacheService.getScriptCache().get('booked_v1')`. If hit, return the cached JSON string directly — no sheet access at all.
 - On cache miss: read sheet (narrow columns only — see item 5), build result, call `cache.put('booked_v1', result, 30)`.
-- In `handleBooking()` after writing the booking row: call `CacheService.getScriptCache().remove('booked_v1')` so the next GET immediately reflects the new booking.
-- Warm cache benchmark: Apps Script response dropped from 4.6s (cold) to 2.6s (warm) — the 2.6s residual is Google's own redirect chain, not sheet access.
+- Warm cache benchmark: Apps Script response dropped substantially, but there is still residual cold-path latency from the Google redirect/network chain.
+
+Verification note:
+
+- The latest measured `2779.4ms` fetch confirms there is still a slow cold-path cost even after Apps Script caching.
+- This means the current implementation improves perceived startup a lot, but it does not eliminate platform/network cold-start latency.
 
 ### ✅ 5. Read only the columns needed from Google Sheets
 
@@ -125,11 +184,10 @@ Target: `apps-script.js`
 
 Implementation:
 
-- Replaced `sheet.getDataRange().getDisplayValues()` (all columns) with three targeted range reads:
-  - `sheet.getRange(2, 5, lastRow-1, 1)` — column E (stallname)
-  - `sheet.getRange(2, 6, lastRow-1, 1)` — column F (booths)
-  - `sheet.getRange(2, 9, lastRow-1, 1)` — column I (status)
-- Each read fetches only 1 column instead of 9; reduces data transferred from Sheets API.
+- Replaced `sheet.getDataRange().getDisplayValues()` (all columns) with targeted reads for:
+  - column E (stallname)
+  - column F (booths)
+  - column I (status)
 - Edge case handled: `lastRow < 2` (empty sheet) returns `{ booked: [], info: {} }` and caches it.
 
 ### 6. Preload the first visible floor-plan image
@@ -241,3 +299,11 @@ If the goal is the best speed gain for the least complexity, implement in this o
 For a system this size, the combination of local cache + short CDN cache + Apps Script cache should make reserved booths appear much faster on startup without changing the booking rules.
 
 The conflict check during booking remains the final source of truth, so a short-lived stale display is acceptable as long as the server keeps rejecting already-booked booths.
+
+Updated assessment from measured runs:
+
+- For real users on repeat visits, the startup experience is now good.
+- For true cold fetches, the system is still bounded by Apps Script/network latency.
+- If further improvement is needed, the next step is not more SVG work; it is either:
+  - better cold-path cache invalidation strategy and verification, or
+  - moving booked-status storage/read logic off Apps Script entirely.
