@@ -673,12 +673,34 @@ Tenda 3m x 3m</li>
   <p>&copy; 2026 <strong>KKIA 17an</strong>. All rights reserved.</p>
 </footer>
 
-<script defer src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad"></script>
+<script src="config.js"></script>
 <script>
-console.log('Build: __HASH__');
+const BOOKING_CONFIG = Object.freeze(Object.assign({
+  buildHash: '',
+  bookedEndpoint: '/api/booked',
+  bookingEndpoint: '/api/booking',
+  turnstileSiteKey: ''
+}, window.BOOKING_CONFIG || {}));
 
-const TURNSTILE_SITE_KEY = '__TURNSTILE_SITE_KEY__'.trim();
+console.log('Build:', BOOKING_CONFIG.buildHash || 'dev');
+
+const BOOKED_ENDPOINT = BOOKING_CONFIG.bookedEndpoint;
+const BOOKING_ENDPOINT = BOOKING_CONFIG.bookingEndpoint;
+const TURNSTILE_SITE_KEY = String(BOOKING_CONFIG.turnstileSiteKey || '').trim();
 const TURNSTILE_ENABLED = !!TURNSTILE_SITE_KEY && !TURNSTILE_SITE_KEY.includes('__TURNSTILE');
+
+if (TURNSTILE_ENABLED) {
+  const turnstileScript = document.createElement('script');
+  turnstileScript.defer = true;
+  turnstileScript.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad';
+  document.head.appendChild(turnstileScript);
+}
+
+function withQueryParam(endpoint, key, value) {
+  const url = new URL(endpoint, window.location.href);
+  url.searchParams.set(key, value);
+  return url.toString();
+}
 
 let turnstileWidgetId = null;
 let turnstileToken = '';
@@ -1182,7 +1204,7 @@ async function submitBooking() {
       booths: ids.join(', '), location, total: '$' + computeTotal() });
     if (TURNSTILE_ENABLED) body.set('cf-turnstile-response', turnstileToken);
 
-    const res  = await fetch('/api/booking', {
+    const res  = await fetch(BOOKING_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body
@@ -1302,7 +1324,9 @@ async function loadBooked(options = {}) {
 
     try {
       profile.start('loadBooked fetch');
-      const res  = await fetch(fresh ? '/api/booked?fresh=1' : '/api/booked');
+      const res  = await fetch(
+        fresh ? withQueryParam(BOOKED_ENDPOINT, 'fresh', '1') : BOOKED_ENDPOINT
+      );
       profile.end('loadBooked fetch', `status=${res.status}${fresh ? ' fresh=1' : ''}`);
 
       profile.start('loadBooked parse-json');
